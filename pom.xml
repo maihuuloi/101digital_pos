@@ -42,6 +42,7 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.liquibase</groupId>
       <artifactId>liquibase-core</artifactId>
@@ -72,8 +73,36 @@
       <groupId>org.openapitools</groupId>
       <version>0.2.6</version>
     </dependency>
-  </dependencies>
+    <!-- MapStruct Core -->
+    <dependency>
+      <artifactId>mapstruct</artifactId>
+      <groupId>org.mapstruct</groupId>
+      <version>1.6.0</version>
+    </dependency>
 
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-openfeign</artifactId>
+    </dependency>
+
+    <dependency>
+      <artifactId>lombok-mapstruct-binding</artifactId>
+      <groupId>org.projectlombok</groupId>
+      <scope>provided</scope>
+      <version>0.2.0</version>
+    </dependency>
+  </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>2024.0.1</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <build>
     <plugins>
       <plugin>
@@ -105,11 +134,11 @@
         <executions>
           <execution>
             <configuration>
-              <apiPackage>com.digital.pos.api</apiPackage>
+              <apiPackage>com.digital.pos.adapter.in.rest.api</apiPackage>
               <configurationFile>${project.basedir}/openapi_spec/config.json</configurationFile>
               <generatorName>spring</generatorName>
-              <inputSpec>${project.basedir}/openapi_spec/coffee-pos-api.yaml</inputSpec>
-              <modelPackage>com.digital.coffeeshop.model</modelPackage>
+              <inputSpec>${project.basedir}/openapi_spec/pos-api.yaml</inputSpec>
+              <modelPackage>com.digital.pos.adapter.in.rest.model</modelPackage>
               <output>${project.build.directory}/generated-sources/openapi_spec</output>
             </configuration>
             <goals>

@@ -7,7 +7,7 @@
     </Console>
 
     <!-- File Appender -->
-    <RollingFile fileName="${LOG_FILE}" filePattern="logs/archive/coffee-pos-service-%d{yyyy-MM-dd}-%i.log.gz"
+    <RollingFile fileName="${LOG_FILE}" filePattern="logs/archive/pos-service-%d{yyyy-MM-dd}-%i.log.gz"
       name="File">
       <DefaultRolloverStrategy max="7"/>
       <PatternLayout pattern="${LOG_PATTERN}"/>
@@ -40,6 +40,6 @@
 
   <Properties>
     <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss} %-5p [%c{1.}] %m%n</Property>
-    <Property name="LOG_FILE">logs/coffee-pos-service.log</Property>
+    <Property name="LOG_FILE">logs/pos-service.log</Property>
   </Properties>
 </Configuration>

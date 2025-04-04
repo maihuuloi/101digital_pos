@@ -2,5 +2,9 @@ server:
   port: 8080
 spring:
   application:
-    name: pos
-
+    name: pos-service
+clients:
+  shop-service:
+    url: http://shop-service:8080
+  menu-service:
+    url: http://menu-service:8080
