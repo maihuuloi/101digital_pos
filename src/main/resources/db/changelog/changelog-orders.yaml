@@ -1,0 +1,107 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-orders-table
+      author: chatgpt
+      changes:
+        - createTable:
+            tableName: orders
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: shop_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: queue_number
+                  type: INT
+              - column:
+                  name: position_in_queue
+                  type: INT
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_shop_id
+            columns:
+              - column:
+                  name: shop_id
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_shop_id_status
+            columns:
+              - column:
+                  name: shop_id
+              - column:
+                  name: status
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_queue
+            columns:
+              - column:
+                  name: queue_number
+      rollback:
+        - dropTable:
+            tableName: orders
+
+  - changeSet:
+      id: 002-create-order-items-table
+      author: chatgpt
+      changes:
+        - createTable:
+            tableName: order_items
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: order_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: menu_item_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price
+                  type: DECIMAL(10,2)
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            constraintName: fk_order_items_orders
+            baseTableName: order_items
+            baseColumnNames: order_id
+            referencedTableName: orders
+            referencedColumnNames: id
+            onDelete: CASCADE
+        - createIndex:
+            tableName: order_items
+            indexName: idx_order_items_order_id
+            columns:
+              - column:
+                  name: order_id
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: order_items
+            constraintName: fk_order_items_orders
+        - dropTable:
+            tableName: order_items

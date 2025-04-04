@@ -60,6 +60,8 @@ paths:
           description: The ID of the order
           schema:
             type: string
+            format: uuid
+            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
       responses:
         "200":
           description: Successful operation
@@ -92,6 +94,8 @@ paths:
           description: The ID of the order to cancel
           schema:
             type: string
+            format: uuid
+            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
       responses:
         "204":
           description: Order canceled successfully (no content)
@@ -121,6 +125,8 @@ paths:
           description: The ID of the order to serve
           schema:
             type: string
+            format: uuid
+            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
       responses:
         "204":
           description: Order served successfully (no content)
@@ -150,6 +156,8 @@ paths:
           description: The shop ID
           schema:
             type: string
+            format: uuid
+            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
       responses:
         "200":
           description: Successful operation
@@ -179,30 +187,68 @@ components:
       properties:
         shopId:
           type: string
-          example: "123"
-        menuItemId:
-          type: string
-          example: "456"
+          format: uuid
+          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          description: The Shop ID (UUID format)
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        items:
+          type: array
+          minItems: 1
+          description: List of items and their quantities in the order
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
       required:
         - shopId
+        - items
+      description: Request body to create a new order with multiple items
+
+    OrderItemRequest:
+      type: object
+      properties:
+        menuItemId:
+          type: string
+          format: uuid
+          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          description: The ID of the menu item
+          example: "789e4567-e89b-12d3-a456-426614174999"
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity of the menu item ordered
+          example: 2
+      required:
         - menuItemId
-      description: Request body to create a new order
+        - quantity
+      description: Represents an individual menu item and quantity in the order
 
     OrderCreatedResponse:
       type: object
       properties:
         orderId:
           type: string
-          example: "abc123"
+          format: uuid
+          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          example: "abc123e4-5678-90ab-cdef-1234567890ab"
         queueNumber:
           type: integer
+          minimum: 1
+          maximum: 3
           example: 1
         position:
           type: integer
+          minimum: 1
+          description: The position of the order in the queue (1-based)
           example: 5
         estimatedWaitMinutes:
           type: integer
+          minimum: 0
+          description: Estimated wait time in minutes
           example: 8
+      required:
+        - orderId
+        - queueNumber
+        - position
+        - estimatedWaitMinutes
       description: Response returned after successfully creating an order
 
     OrderStatusResponse:
@@ -210,7 +256,9 @@ components:
       properties:
         orderId:
           type: string
-          example: "abc123"
+          format: uuid
+          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          example: "abc123e4-5678-90ab-cdef-1234567890ab"
         status:
           type: string
           enum:
@@ -218,15 +266,29 @@ components:
             - CANCELED
             - SERVED
           example: "PENDING"
+          description: Current order status
         queueNumber:
           type: integer
+          minimum: 1
+          maximum: 3
+          description: Which queue the order was assigned to
           example: 1
         position:
           type: integer
+          minimum: 0
+          description: Current position in the queue
           example: 3
         estimatedWaitMinutes:
           type: integer
+          minimum: 0
+          description: Estimated wait time in minutes
           example: 5
+      required:
+        - orderId
+        - status
+        - queueNumber
+        - position
+        - estimatedWaitMinutes
       description: Response showing the order's status and position in queue
 
     ShopQueueResponse:
@@ -234,11 +296,16 @@ components:
       properties:
         shopId:
           type: string
-          example: "123"
+          format: uuid
+          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          example: "123e4567-e89b-12d3-a456-426614174000"
         queues:
           type: array
           items:
             $ref: '#/components/schemas/QueueInfo'
+      required:
+        - shopId
+        - queues
       description: Overview of the queues at a particular shop
 
     QueueInfo:
@@ -246,13 +313,23 @@ components:
       properties:
         queueNumber:
           type: integer
+          minimum: 1
+          maximum: 3
           example: 1
         size:
           type: integer
+          minimum: 0
+          description: Current number of orders in the queue
           example: 6
         maxSize:
           type: integer
+          minimum: 1
+          description: Maximum capacity of this queue
           example: 10
+      required:
+        - queueNumber
+        - size
+        - maxSize
       description: Details for a single queue, including current size and max capacity
 
 security:
