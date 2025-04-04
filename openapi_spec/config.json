@@ -1,0 +1,12 @@
+{
+  "interfaceOnly": true,
+  "delegatePattern": true,
+  "dateLibrary": "java8",
+  "springBoot3": "true",
+  "useTags": true,
+  "hideGenerationTimestamp": true,
+  "useSpringfox": false,
+  "useJakartaEe": true,
+  "library": "spring-boot",
+  "generateModelConstructors": false
+}

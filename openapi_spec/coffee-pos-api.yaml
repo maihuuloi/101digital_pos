@@ -1,0 +1,259 @@
+openapi: 3.0.3
+info:
+  title: Process Order Service API
+  description: API for creating, managing, and serving coffee orders in a queue.
+  version: "1.0.0"
+
+servers:
+  - url: "http://localhost:8082"
+    description: Local development server
+
+tags:
+  - name: Orders
+    description: Endpoints related to creating, fetching, and updating orders
+  - name: Shops
+    description: Endpoints for retrieving shop queue information
+
+paths:
+  /api/orders:
+    post:
+      tags:
+        - Orders
+      summary: Place a new order
+      operationId: createOrder
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        "200":
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCreatedResponse'
+        "400":
+          description: Bad request (invalid payload or validation error)
+        "401":
+          description: Unauthorized (missing or invalid JWT)
+        "403":
+          description: Forbidden (user lacks permission)
+        "500":
+          description: Internal server error
+
+  /api/orders/{orderId}:
+    get:
+      tags:
+        - Orders
+      summary: Get order status and queue position
+      operationId: getOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: The ID of the order
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found (order does not exist)
+        "500":
+          description: Internal server error
+
+    delete:
+      tags:
+        - Orders
+      summary: Cancel an order
+      operationId: cancelOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: The ID of the order to cancel
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Order canceled successfully (no content)
+        "400":
+          description: Bad request (e.g., order not in PENDING status)
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden (user not owner of the order)
+        "404":
+          description: Not found
+        "500":
+          description: Internal server error
+
+  /api/orders/{orderId}/serve:
+    patch:
+      tags:
+        - Orders
+      summary: Mark an order as served (by shop operator)
+      operationId: serveOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: The ID of the order to serve
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Order served successfully (no content)
+        "400":
+          description: Bad request (e.g., order not in PENDING status)
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden (user is not an operator/shop owner)
+        "404":
+          description: Not found
+        "500":
+          description: Internal server error
+
+  /api/shops/{shopId}/queue:
+    get:
+      tags:
+        - Shops
+      summary: Returns queue snapshot for a given shop
+      operationId: getShopQueueSnapshot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          description: The shop ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopQueueResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+        "500":
+          description: Internal server error
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateOrderRequest:
+      type: object
+      properties:
+        shopId:
+          type: string
+          example: "123"
+        menuItemId:
+          type: string
+          example: "456"
+      required:
+        - shopId
+        - menuItemId
+      description: Request body to create a new order
+
+    OrderCreatedResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          example: "abc123"
+        queueNumber:
+          type: integer
+          example: 1
+        position:
+          type: integer
+          example: 5
+        estimatedWaitMinutes:
+          type: integer
+          example: 8
+      description: Response returned after successfully creating an order
+
+    OrderStatusResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          example: "abc123"
+        status:
+          type: string
+          enum:
+            - PENDING
+            - CANCELED
+            - SERVED
+          example: "PENDING"
+        queueNumber:
+          type: integer
+          example: 1
+        position:
+          type: integer
+          example: 3
+        estimatedWaitMinutes:
+          type: integer
+          example: 5
+      description: Response showing the order's status and position in queue
+
+    ShopQueueResponse:
+      type: object
+      properties:
+        shopId:
+          type: string
+          example: "123"
+        queues:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueInfo'
+      description: Overview of the queues at a particular shop
+
+    QueueInfo:
+      type: object
+      properties:
+        queueNumber:
+          type: integer
+          example: 1
+        size:
+          type: integer
+          example: 6
+        maxSize:
+          type: integer
+          example: 10
+      description: Details for a single queue, including current size and max capacity
+
+security:
+  - bearerAuth: []
