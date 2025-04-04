@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" status="INFO">
+  <Appenders>
+    <!-- Console Appender -->
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="${LOG_PATTERN}"/>
+    </Console>
+
+    <!-- File Appender -->
+    <RollingFile fileName="${LOG_FILE}" filePattern="logs/archive/coffee-pos-service-%d{yyyy-MM-dd}-%i.log.gz"
+      name="File">
+      <DefaultRolloverStrategy max="7"/>
+      <PatternLayout pattern="${LOG_PATTERN}"/>
+      <Policies>
+        <SizeBasedTriggeringPolicy size="10MB"/>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+      </Policies>
+    </RollingFile>
+  </Appenders>
+
+  <Loggers>
+    <!-- Application Logs -->
+    <Logger additivity="false" level="DEBUG" name="com.digital.pos">
+      <AppenderRef ref="Console"/>
+      <AppenderRef ref="File"/>
+    </Logger>
+
+    <!-- Hibernate SQL Logging (optional) -->
+    <Logger additivity="false" level="DEBUG" name="org.hibernate.SQL">
+      <AppenderRef ref="Console"/>
+      <AppenderRef ref="File"/>
+    </Logger>
+
+    <!-- Root Logger -->
+    <Root level="INFO">
+      <AppenderRef ref="Console"/>
+      <AppenderRef ref="File"/>
+    </Root>
+  </Loggers>
+
+  <Properties>
+    <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss} %-5p [%c{1.}] %m%n</Property>
+    <Property name="LOG_FILE">logs/coffee-pos-service.log</Property>
+  </Properties>
+</Configuration>
