@@ -10,7 +10,6 @@ public class VipMemberShipQueueStrategy implements QueueAssignmentStrategy {
 
   @Override
   public boolean supports(ShopConfiguration config) {
-    // Check if the strategy is applicable based on the shop configuration
     return config.queueStrategy().equalsIgnoreCase(StrategyType.VIP_MEMBERSHIP.name());
   }
 
@@ -18,7 +17,7 @@ public class VipMemberShipQueueStrategy implements QueueAssignmentStrategy {
   public QueueAssignmentResult assign(QueueAssignmentContext queueAssignmentContext) {
     Order order = queueAssignmentContext.order();
     List<Order> waitingOrders = queueAssignmentContext.waitingOrders();
-
+    //TODO: Implement the logic to assign a queue based on highscore score
     return new QueueAssignmentResult(1);
 
   }

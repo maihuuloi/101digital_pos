@@ -2,4 +2,6 @@ databaseChangeLog:
   - include:
       file: changelog-orders.yaml
       relativeToChangelogFile: true
-
+  - include:
+      file: changelog-composite-index-shop-status.yaml
+      relativeToChangelogFile: true

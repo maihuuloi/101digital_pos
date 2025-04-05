@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-composite-index-shop-queue-status
+      author: your-name
+      changes:
+        - createIndex:
+            indexName: idx_order_shop_queue_status
+            tableName: orders
+            columns:
+              - column:
+                  name: shop_id
+              - column:
+                  name: status

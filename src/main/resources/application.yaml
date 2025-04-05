@@ -28,6 +28,7 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/changelog-master.yaml
+
 clients:
   shop-service:
     url: http://localhost:8080
@@ -59,3 +60,4 @@ redisson:
       tcpNoDelay: false
       nameMapper: null
       addressResolverGroupFactory: null
+
