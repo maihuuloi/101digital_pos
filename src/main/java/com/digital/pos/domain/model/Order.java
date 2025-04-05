@@ -20,7 +20,6 @@ public class Order {
   private UUID shopId;
   private List<OrderItem> items;
   private Integer queueNumber;
-  private Integer orderSequence;
   private OrderStatus status;
 
   public static Order createNew(UUID shopId, List<OrderItem> items) {

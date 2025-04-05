@@ -34,8 +34,8 @@ class MostAvailableQueueAssignmentStrategyTest {
     );
     ShopConfiguration config = new ShopConfiguration(UUID.randomUUID(), "MOST_AVAILABLE", capacities);
 
-    // Simulate pending orders:
-    List<Order> pendingOrders = List.of(
+    // Simulate waiting orders:
+    List<Order> waitingOrders = List.of(
         createOrder(1), createOrder(1), // 2 in queue 1
         createOrder(2), createOrder(2), createOrder(2), // 3 in queue 2
         createOrder(3), createOrder(3), createOrder(3), createOrder(3) // 4 in queue 3
@@ -47,7 +47,7 @@ class MostAvailableQueueAssignmentStrategyTest {
 
     Order newOrder = createOrder(null); // unassigned
 
-    QueueAssignmentResult result = strategy.assign(new QueueAssignmentContext(newOrder, config, pendingOrders));
+    QueueAssignmentResult result = strategy.assign(new QueueAssignmentContext(newOrder, config, waitingOrders));
 
     assertEquals(2, result.queueNumber());
   }
@@ -65,14 +65,14 @@ class MostAvailableQueueAssignmentStrategyTest {
     ShopConfiguration config = new ShopConfiguration(shopId, "most-available", queueCapacities);
 
     // Simulate all queues full
-    List<Order> pendingOrders = List.of(
+    List<Order> waitingOrders = List.of(
         orderWith(shopId, 1),
         orderWith(shopId, 1),
         orderWith(shopId, 2),
         orderWith(shopId, 2)
     );
 
-    QueueAssignmentContext context = new QueueAssignmentContext(order, config, pendingOrders);
+    QueueAssignmentContext context = new QueueAssignmentContext(order, config, waitingOrders);
 
     // When / Then
     assertThrows(AllQueueFullException.class, () -> strategy.assign(context));

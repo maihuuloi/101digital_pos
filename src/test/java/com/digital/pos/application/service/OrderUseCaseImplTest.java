@@ -28,7 +28,6 @@ import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderItem;
 import com.digital.pos.domain.model.OrderStatus;
 import com.digital.pos.domain.model.QueueAssignmentResult;
-import com.digital.pos.domain.service.QueueAssignmentEngine;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -55,10 +54,10 @@ class OrderUseCaseImplTest {
   @Mock
   private OrderMapper orderMapper;
   @Mock
-  private ProcessOrderApplicationService processOrderApplicationService;
+  private QueueService queueService;
 
   @InjectMocks
-  private OrderUseCaseImpl orderUseCase;
+  private OrderService orderUseCase;
 
   @Test
   void createOrder_shouldSucceed_whenShopAndItemsAreValid() {
@@ -83,9 +82,9 @@ class OrderUseCaseImplTest {
     when(lock.doWithLock(any(), any(), any(), any()))
         .thenAnswer(invocation -> ((Supplier<Order>) invocation.getArgument(3)).get());
 
-    when(processOrderApplicationService.assignOrderToQueue(any())).thenReturn(new QueueAssignmentResult( 1));
+    when(queueService.assignOrderToQueue(any())).thenReturn(new QueueAssignmentResult( 1));
     when(orderRepository.save(any())).thenReturn(savedOrder);
-    when(processOrderApplicationService.getLivePosition(savedOrder)).thenReturn(livePosition);
+    when(queueService.getLivePosition(savedOrder)).thenReturn(livePosition);
     when(orderMapper.toOrderCreatedResponse(savedOrder, livePosition)).thenReturn(expectedResponse);
 
     // Act
@@ -97,8 +96,8 @@ class OrderUseCaseImplTest {
     verify(menuService).getAvailableItemIds(shopId);
     verify(lock).doWithLock(eq(QueueLockKey.of(shopId)), any(), any(), any());
     verify(orderRepository).save(any());
-    verify(processOrderApplicationService).assignOrderToQueue(any());
-    verify(processOrderApplicationService).getLivePosition(savedOrder);
+    verify(queueService).assignOrderToQueue(any());
+    verify(queueService).getLivePosition(savedOrder);
     verify(orderMapper).toOrderCreatedResponse(savedOrder, livePosition);
   }
 
@@ -125,7 +124,7 @@ class OrderUseCaseImplTest {
     verifyNoMoreInteractions(
         shopService,
         menuService,
-        processOrderApplicationService,
+        queueService,
         orderRepository,
         orderMapper
     );
@@ -158,7 +157,7 @@ class OrderUseCaseImplTest {
     // Verify interactions
     verify(shopService).existsById(shopId);
     verify(menuService).getAvailableItemIds(shopId);
-    verifyNoInteractions(processOrderApplicationService, orderRepository, orderMapper);
+    verifyNoInteractions(queueService, orderRepository, orderMapper);
   }
   // createOrder_shouldPersistOrder_whenValidRequestGiven
   // createOrder_shouldAssignOrderToQueue_whenValidRequestGiven

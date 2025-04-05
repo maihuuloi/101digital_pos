@@ -3,7 +3,8 @@ package com.digital.pos.application.service;
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
 import com.digital.pos.application.mapper.OrderMapper;
-import com.digital.pos.application.port.in.OrderUseCase;
+import com.digital.pos.application.port.in.CreateOrderUseCase;
+import com.digital.pos.application.port.in.ServeOrderUseCase;
 import com.digital.pos.application.port.out.LockService;
 import com.digital.pos.application.port.out.MenuService;
 import com.digital.pos.application.port.out.OrderRepository;
@@ -32,10 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Service
 @Transactional
-public class OrderUseCaseImpl implements OrderUseCase {
+public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
 
   private final OrderRepository orderRepository;
-  private final ProcessOrderApplicationService processOrderApplicationService;
+  private final QueueService queueService;
   private final ShopService shopService; // External service
   private final MenuService menuService; // External service
   private final OrderMapper orderMapper;
@@ -72,15 +73,16 @@ public class OrderUseCaseImpl implements OrderUseCase {
     );
     log.debug("Order {} created and assigned to queue", savedOrder.getId());
 
-    Integer livePosition = processOrderApplicationService.getLivePosition(savedOrder);
+    Integer livePosition = queueService.getLivePosition(savedOrder);
     log.info("Order {} live position in queue is {}", savedOrder.getId(), livePosition);
 
     return orderMapper.toOrderCreatedResponse(savedOrder, livePosition);
   }
 
+
   private Order processOrder(Order order) {
     // Create and assign
-    QueueAssignmentResult assignment = processOrderApplicationService.assignOrderToQueue(order);
+    QueueAssignmentResult assignment = queueService.assignOrderToQueue(order);
     order.assignQueue(assignment.queueNumber());
 
     Order savedOrder = orderRepository.save(order);

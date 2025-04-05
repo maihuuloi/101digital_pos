@@ -3,9 +3,9 @@ package com.digital.pos.adapter.in.rest;
 import com.digital.pos.adapter.in.rest.api.OrdersApi;
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
-import com.digital.pos.application.port.in.OrderUseCase;
+import com.digital.pos.application.port.in.CreateOrderUseCase;
+import com.digital.pos.application.port.in.ServeOrderUseCase;
 import io.swagger.v3.oas.annotations.Parameter;
-import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 @AllArgsConstructor
 public class OrderController implements OrdersApi {
 
-  private final OrderUseCase orderUseCase;
+  private final CreateOrderUseCase createOrderUseCase;
+  private final ServeOrderUseCase serveOrderUseCase;
 
   /**
    * POST /api/orders : Place a new order
@@ -34,20 +35,21 @@ public class OrderController implements OrdersApi {
     log.info("Received request to create an order for shopId={}, menuItemId={}",
         createOrderRequest.getShopId(), createOrderRequest.getItems());
 
-    OrderCreatedResponse response = orderUseCase.createOrder(createOrderRequest);
+    OrderCreatedResponse response = createOrderUseCase.createOrder(createOrderRequest);
 
     log.info("Order created successfully. orderId={}, queueNumber={}, position={}",
         response.getOrderId(), response.getQueueNumber(), response.getLivePosition());
 
     return ResponseEntity.ok(response);
   }
+
   @Override
   public ResponseEntity<Void> serveOrder(Long orderId) {
-      log.info("Received request to serve an order for shopId={}", orderId);
-      orderUseCase.serveOrder(orderId);
+    log.info("Received request to serve an order for shopId={}", orderId);
+    serveOrderUseCase.serveOrder(orderId);
 
-      log.info("Order served successfully. orderId={}", orderId);
-      return ResponseEntity.ok().build();
+    log.info("Order served successfully. orderId={}", orderId);
+    return ResponseEntity.ok().build();
   }
 
 }

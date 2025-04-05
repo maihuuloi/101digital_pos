@@ -40,9 +40,9 @@ public class OrderRepositoryImpl implements OrderRepository {
   }
 
   @Override
-  public Integer findLivePositionInQueue(Long orderId) {
+  public Integer findPositionInQueueOrderById(Long orderId) {
 
-    return jpaOrderRepository.findLivePositionInQueue(orderId);
+    return jpaOrderRepository.findPositionInQueueOrderById(orderId);
   }
 
 }

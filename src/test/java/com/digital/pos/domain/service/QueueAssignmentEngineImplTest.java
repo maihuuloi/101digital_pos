@@ -39,20 +39,20 @@ class QueueAssignmentEngineImplTest {
     ShopConfiguration config = new ShopConfiguration(shopId,
         MostAvailableQueueAssignmentStrategy.NAME, Map.of(1, 5, 2, 5, 3, 5));
     Order order = new Order(); // mock or real
-    List<Order> pendingOrders = List.of();
+    List<Order> waitingOrders = List.of();
 
     QueueAssignmentResult expectedResult = new QueueAssignmentResult(2);
 
     when(mostAvailableStrategy.supports(config)).thenReturn(true);
-    when(mostAvailableStrategy.assign(new QueueAssignmentContext(order, config, pendingOrders)))
+    when(mostAvailableStrategy.assign(new QueueAssignmentContext(order, config, waitingOrders)))
         .thenReturn(expectedResult);
 
     // Act
-    QueueAssignmentResult result = engine.assign(new QueueAssignmentContext(order, config, pendingOrders));
+    QueueAssignmentResult result = engine.assign(new QueueAssignmentContext(order, config, waitingOrders));
 
     // Assert
     assertEquals(expectedResult, result);
-    verify(mostAvailableStrategy).assign(new QueueAssignmentContext(order, config, pendingOrders));
+    verify(mostAvailableStrategy).assign(new QueueAssignmentContext(order, config, waitingOrders));
   }
 
   @Test
@@ -61,13 +61,13 @@ class QueueAssignmentEngineImplTest {
     UUID shopId = UUID.randomUUID();
     ShopConfiguration config = new ShopConfiguration(shopId, "UNKNOWN", Map.of());
     Order order = new Order();
-    List<Order> pendingOrders = List.of();
+    List<Order> waitingOrders = List.of();
 
     when(mostAvailableStrategy.supports(config)).thenReturn(false);
 
     // Act & Assert
     IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-        engine.assign(new QueueAssignmentContext(order, config, pendingOrders))
+        engine.assign(new QueueAssignmentContext(order, config, waitingOrders))
     );
 
     assertEquals("No matching strategy for shop", ex.getMessage());

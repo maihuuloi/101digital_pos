@@ -22,7 +22,7 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
   @Override
   public QueueAssignmentResult assign(QueueAssignmentContext ctx) {
     Map<Integer, Integer> capacities = ctx.config().queueCapacities();
-    Map<Integer, Long> currentCounts = ctx.pendingOrders().stream()
+    Map<Integer, Long> currentCounts = ctx.waitingOrders().stream()
         .collect(Collectors.groupingBy(Order::getQueueNumber, Collectors.counting()));
 
     int selectedQueue = -1;

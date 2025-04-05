@@ -98,7 +98,7 @@ paths:
         "204":
           description: Order canceled successfully (no content)
         "400":
-          description: Bad request (e.g., order not in PENDING status)
+          description: Bad request (e.g., order not in WAITING status)
         "401":
           description: Unauthorized
         "403":
@@ -128,7 +128,7 @@ paths:
         "204":
           description: Order served successfully (no content)
         "400":
-          description: Bad request (e.g., order not in PENDING status)
+          description: Bad request (e.g., order not in WAITING status)
         "401":
           description: Unauthorized
         "403":
@@ -255,10 +255,10 @@ components:
         status:
           type: string
           enum:
-            - PENDING
+            - WAITING
             - CANCELED
             - SERVED
-          example: "PENDING"
+          example: "WAITING"
           description: Current order status
         queueNumber:
           type: integer
@@ -319,11 +319,46 @@ components:
           minimum: 1
           description: Maximum capacity of this queue
           example: 10
+        orders:
+          type: array
+          description: Lightweight list of orders in this queue
+          items:
+            $ref: '#/components/schemas/QueueOrderSummary'
       required:
         - queueNumber
         - size
         - maxSize
-      description: Details for a single queue, including current size and max capacity
+        - orders
+      description: Details for a single queue, including order summaries
+    QueueOrderSummary:
+      type: object
+      properties:
+        orderId:
+          type: integer
+          format: int64
+          example: "abc123e4-5678-90ab-cdef-1234567890ab"
+        livePosition:
+          type: integer
+          minimum: 1
+          description: Assigned position of the order in queue
+          example: 3
+        status:
+          type: string
+          enum:
+            - WAITING
+            - SERVED
+            - CANCELED
+          example: "WAITING"
+        estimatedWaitMinutes:
+          type: integer
+          minimum: 0
+          example: 6
+      required:
+        - orderId
+        - livePosition
+        - status
+        - estimatedWaitMinutes
+      description: Minimal representation of an order in the queue
 
 security:
   - bearerAuth: []
