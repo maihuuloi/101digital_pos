@@ -25,16 +25,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class QueueServiceTest {
 
+  private final UUID shopId = UUID.randomUUID();
   @Mock
   private ShopService shopService;
-
   @Mock
   private OrderRepository orderRepository;
-
   @InjectMocks
   private QueueService queueService;
-
-  private final UUID shopId = UUID.randomUUID();
 
   @Test
   void shouldThrowExceptionWhenShopNotFound() {
@@ -44,6 +41,7 @@ class QueueServiceTest {
       queueService.getShopQueueSnapshot(shopId);
     });
   }
+
   @Test
   void shouldReturnSortedOrdersWithLivePositionBasedOnId() {
     when(shopService.existsById(shopId)).thenReturn(true);

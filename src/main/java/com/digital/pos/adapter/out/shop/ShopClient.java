@@ -13,6 +13,7 @@ public interface ShopClient {
 
   @RequestMapping(method = RequestMethod.HEAD, value = "/api/shops/{shopId}/exists")
   ResponseEntity<Void> checkShopExists(@PathVariable("shopId") UUID shopId);
+
   /**
    * Fetches the configuration for a specific shop.
    *

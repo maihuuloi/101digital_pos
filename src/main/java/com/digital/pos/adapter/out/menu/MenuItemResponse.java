@@ -7,4 +7,6 @@ public record MenuItemResponse(
     String name,
     double price,
     boolean available
-) {}
+) {
+
+}

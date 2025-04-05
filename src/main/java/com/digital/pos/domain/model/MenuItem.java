@@ -7,4 +7,5 @@ public record MenuItem(UUID id,
                        String name,
                        double price,
                        boolean available) implements Serializable {
+
 }

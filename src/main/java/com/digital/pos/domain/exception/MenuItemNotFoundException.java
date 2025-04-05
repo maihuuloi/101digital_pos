@@ -4,7 +4,7 @@ import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-public class MenuItemNotFoundException extends RuntimeException{
+public class MenuItemNotFoundException extends RuntimeException {
 
   private final UUID menuItemId;
 

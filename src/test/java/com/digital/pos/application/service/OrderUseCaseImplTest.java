@@ -2,14 +2,14 @@ package com.digital.pos.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.any;
 
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
@@ -66,7 +66,7 @@ class OrderUseCaseImplTest {
     UUID menuItemId = UUID.randomUUID();
     int livePosition = 3;
 
-    CreateOrderRequest request = new CreateOrderRequest(shopId,List.of(new OrderItemRequest(menuItemId, 2)));
+    CreateOrderRequest request = new CreateOrderRequest(shopId, List.of(new OrderItemRequest(menuItemId, 2)));
 
     MenuItem menuItem = new MenuItem(menuItemId, "Latte", 50.0, true);
     Order order = Order.createNew(shopId, List.of(new OrderItem(menuItemId, 2, 50.0)));
@@ -74,7 +74,7 @@ class OrderUseCaseImplTest {
     savedOrder.assignQueue(1); // queueNumber
     ReflectionTestUtils.setField(savedOrder, "id", order.getId());
 
-    OrderCreatedResponse expectedResponse = new OrderCreatedResponse(order.getId(), 1,livePosition,22);
+    OrderCreatedResponse expectedResponse = new OrderCreatedResponse(order.getId(), 1, livePosition, 22);
 
     // Mocks
     when(shopService.existsById(shopId)).thenReturn(true);
@@ -82,7 +82,7 @@ class OrderUseCaseImplTest {
     when(lock.doWithLock(any(), any(), any(), any()))
         .thenAnswer(invocation -> ((Supplier<Order>) invocation.getArgument(3)).get());
 
-    when(queueService.assignOrderToQueue(any())).thenReturn(new QueueAssignmentResult( 1));
+    when(queueService.assignOrderToQueue(any())).thenReturn(new QueueAssignmentResult(1));
     when(orderRepository.save(any())).thenReturn(savedOrder);
     when(queueService.getLivePosition(savedOrder)).thenReturn(livePosition);
     when(orderMapper.toOrderCreatedResponse(savedOrder, livePosition)).thenReturn(expectedResponse);

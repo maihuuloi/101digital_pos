@@ -18,7 +18,7 @@ public class OrderEntityMapper {
     entity.setStatus(order.getStatus());
 
     List<OrderItemEntity> itemEntities = order.getItems().stream()
-        .map(i -> new OrderItemEntity(null,i.menuItemId(), i.quantity(), i.price(), entity))
+        .map(i -> new OrderItemEntity(null, i.menuItemId(), i.quantity(), i.price(), entity))
         .toList();
     entity.setItems(itemEntities);
 

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 @Log4j2
 public class RestControllerAdvice {
+
   @ExceptionHandler(AllQueueFullException.class)
   public ResponseEntity<ErrorResponse> handleAllQueueFull(AllQueueFullException ex) {
     return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -20,19 +21,19 @@ public class RestControllerAdvice {
 
   @ExceptionHandler(EntityNotFoundException.class)
   public ResponseEntity<?> handleNotFound(EntityNotFoundException ex) {
-    log.error("User not found: {}", ex.getMessage(),ex);
+    log.error("User not found: {}", ex.getMessage(), ex);
     return buildResponse(HttpStatus.NOT_FOUND, "DATA_NOT_FOUND", ex.getMessage());
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<?> handleGeneral(Exception ex) {
-    log.error("An error occurred: {}", ex.getMessage(),ex);
+    log.error("An error occurred: {}", ex.getMessage(), ex);
     return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "An error occurred");
   }
 
   @ExceptionHandler(InvalidRefreshTokenException.class)
   public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
-    log.error("Invalid refresh token: {}", ex.getMessage(),ex);
+    log.error("Invalid refresh token: {}", ex.getMessage(), ex);
     return buildResponse(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", ex.getMessage());
 
   }

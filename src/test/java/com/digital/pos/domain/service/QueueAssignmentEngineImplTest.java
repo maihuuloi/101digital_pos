@@ -1,15 +1,15 @@
 package com.digital.pos.domain.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.QueueAssignmentResult;
 import com.digital.pos.domain.model.ShopConfiguration;
-import com.digital.pos.domain.service.strategy.MostAvailableQueueAssignmentStrategy;
 import com.digital.pos.domain.service.strategy.QueueAssignmentStrategy;
+import com.digital.pos.domain.service.strategy.StrategyType;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,7 +29,7 @@ class QueueAssignmentEngineImplTest {
 
   @BeforeEach
   void setUp() {
-    engine = new QueueAssignmentEngineImpl(List.of( mostAvailableStrategy));
+    engine = new QueueAssignmentEngineImpl(List.of(mostAvailableStrategy));
   }
 
   @Test
@@ -37,7 +37,7 @@ class QueueAssignmentEngineImplTest {
     // Arrange
     UUID shopId = UUID.randomUUID();
     ShopConfiguration config = new ShopConfiguration(shopId,
-        MostAvailableQueueAssignmentStrategy.NAME, Map.of(1, 5, 2, 5, 3, 5));
+        StrategyType.MOST_AVAILABLE.name(), Map.of(1, 5, 2, 5, 3, 5));
     Order order = new Order(); // mock or real
     List<Order> waitingOrders = List.of();
 
@@ -72,7 +72,6 @@ class QueueAssignmentEngineImplTest {
 
     assertEquals("No matching strategy for shop", ex.getMessage());
   }
-
 
 
 }

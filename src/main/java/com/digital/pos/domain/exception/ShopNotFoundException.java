@@ -4,7 +4,7 @@ import java.util.UUID;
 import lombok.Getter;
 
 @Getter
-public class ShopNotFoundException extends RuntimeException{
+public class ShopNotFoundException extends RuntimeException {
 
   private final UUID shopId;
 

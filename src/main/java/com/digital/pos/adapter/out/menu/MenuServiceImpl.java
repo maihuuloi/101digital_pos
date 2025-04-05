@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 @Slf4j
 public class MenuServiceImpl implements MenuService {
+
   private MenuClient menuClient;
 
   @Override

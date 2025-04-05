@@ -1,7 +1,6 @@
 package com.digital.pos.adapter.out.shop;
 
 import com.digital.pos.application.port.out.ShopService;
-import com.digital.pos.domain.exception.ShopConfigurationNotFoundException;
 import com.digital.pos.domain.exception.ShopNotFoundException;
 import com.digital.pos.domain.model.ShopConfiguration;
 import feign.FeignException;

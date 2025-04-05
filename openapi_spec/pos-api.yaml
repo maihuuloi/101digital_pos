@@ -22,7 +22,7 @@ paths:
       summary: Place a new order
       operationId: createOrder
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -52,7 +52,7 @@ paths:
       summary: Get order status and queue position
       operationId: getOrder
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       parameters:
         - name: orderId
           in: path
@@ -85,7 +85,7 @@ paths:
       summary: Cancel an order
       operationId: cancelOrder
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       parameters:
         - name: orderId
           in: path
@@ -115,7 +115,7 @@ paths:
       summary: Mark an order as served (by shop operator)
       operationId: serveOrder
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       parameters:
         - name: orderId
           in: path
@@ -145,7 +145,7 @@ paths:
       summary: Returns queue snapshot for a given shop
       operationId: getShopQueueSnapshot
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       parameters:
         - name: shopId
           in: path
@@ -361,4 +361,4 @@ components:
       description: Minimal representation of an order in the queue
 
 security:
-  - bearerAuth: []
+  - bearerAuth: [ ]

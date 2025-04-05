@@ -1,6 +1,7 @@
 package com.digital.pos.domain.service.strategy;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -76,6 +77,48 @@ class MostAvailableQueueAssignmentStrategyTest {
 
     // When / Then
     assertThrows(AllQueueFullException.class, () -> strategy.assign(context));
+  }
+
+  @Test
+  void assign_shouldHandleEmptyWaitingOrders() {
+    // Setup shop config: 3 queues
+    Map<Integer, Integer> capacities = Map.of(
+        1, 5,
+        2, 8,
+        3, 6
+    );
+    ShopConfiguration config = new ShopConfiguration(UUID.randomUUID(), "MOST_AVAILABLE", capacities);
+
+    // No waiting orders
+    List<Order> waitingOrders = List.of();
+
+    Order newOrder = createOrder(null); // unassigned
+
+    QueueAssignmentResult result = strategy.assign(new QueueAssignmentContext(newOrder, config, waitingOrders));
+
+    assertEquals(2, result.queueNumber());
+  }
+
+  @Test
+  void assign_shouldHandleSingleQueue() {
+    // Setup shop config: 1 queue
+    Map<Integer, Integer> capacities = Map.of(
+        1, 5
+    );
+    ShopConfiguration config = new ShopConfiguration(UUID.randomUUID(), "MOST_AVAILABLE", capacities);
+
+    // Simulate waiting orders:
+    List<Order> waitingOrders = List.of(
+        createOrder(1), createOrder(1) // 2 in queue 1
+    );
+
+    // Queue 1 has 3 slots
+
+    Order newOrder = createOrder(null); // unassigned
+
+    QueueAssignmentResult result = strategy.assign(new QueueAssignmentContext(newOrder, config, waitingOrders));
+
+    assertEquals(1, result.queueNumber());
   }
 
   private Order orderWith(UUID shopId, int queueNumber) {

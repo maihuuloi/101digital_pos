@@ -42,55 +42,6 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
   private final OrderMapper orderMapper;
   private final LockService lock;
 
-  @Override
-  @Transactional
-  public OrderCreatedResponse createOrder(CreateOrderRequest request) {
-    UUID shopId = request.getShopId();
-    log.debug("Creating order for shop {}", shopId);
-
-    // Validate shop exists
-    if (!shopService.existsById(shopId)) {
-      throw new ShopNotFoundException(shopId);
-    }
-
-    // Convert and validate each item
-    log.info("Fetching available menu items for shop {}", shopId);
-    Set<MenuItem> shopMenuItems = menuService.getAvailableItemIds(shopId);
-    Map<UUID,MenuItem> menuItemMap = shopMenuItems.stream()
-        .collect(Collectors.toMap(MenuItem::id, item -> item));
-    log.debug("Found {} available menu items", shopMenuItems.size());
-
-    List<OrderItem> items = getValidOrderItems(request, menuItemMap);
-    log.info("Order items validated, found {} items", items.size());
-    Order order = Order.createNew(shopId, items);
-
-
-    String lockKey = QueueLockKey.of(shopId);
-    Order savedOrder = lock.doWithLock(lockKey,
-        Duration.ofSeconds(5),
-        Duration.ofSeconds(10),
-        () -> processOrder(order)
-    );
-    log.debug("Order {} created and assigned to queue", savedOrder.getId());
-
-    Integer livePosition = queueService.getLivePosition(savedOrder);
-    log.info("Order {} live position in queue is {}", savedOrder.getId(), livePosition);
-
-    return orderMapper.toOrderCreatedResponse(savedOrder, livePosition);
-  }
-
-
-  private Order processOrder(Order order) {
-    // Create and assign
-    QueueAssignmentResult assignment = queueService.assignOrderToQueue(order);
-    order.assignQueue(assignment.queueNumber());
-
-    Order savedOrder = orderRepository.save(order);
-    log.debug("Saved order with ID {}", order.getId());
-
-    return savedOrder;
-  }
-
   private static List<OrderItem> getValidOrderItems(CreateOrderRequest request, Map<UUID, MenuItem> menuItemMap) {
     return request.getItems().stream()
         .map(itemRequest -> {
@@ -104,6 +55,69 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
         .collect(Collectors.toList());
   }
 
+  private static void validateOrderStatus(Order order) {
+    if (!order.isWaiting()) {
+      log.warn("Cannot serve order {} because it is in status {}", order.getId(), order.getStatus());
+      throw new InvalidOrderStateException(order.getId(), order.getStatus(), OrderStatus.WAITING);
+    }
+  }
+
+  @Override
+  @Transactional
+  public OrderCreatedResponse createOrder(CreateOrderRequest request) {
+    UUID shopId = request.getShopId();
+    log.debug("Creating order for shop {}", shopId);
+
+    validateShopExists(shopId);
+
+    List<OrderItem> items = getValidOrderItems(request, shopId);
+    Order order = Order.createNew(shopId, items);
+
+    Order savedOrder = processOrderWithLock(shopId, order);
+
+    Integer livePosition = queueService.getLivePosition(savedOrder);
+    log.info("Order {} live position in queue is {}", savedOrder.getId(), livePosition);
+
+    return orderMapper.toOrderCreatedResponse(savedOrder, livePosition);
+  }
+
+  private Order processOrderWithLock(UUID shopId, Order order) {
+    String lockKey = QueueLockKey.of(shopId);
+    return lock.doWithLock(lockKey,
+        Duration.ofSeconds(5),
+        Duration.ofSeconds(10),
+        () -> processOrder(order)
+    );
+  }
+
+  private List<OrderItem> getValidOrderItems(CreateOrderRequest request, UUID shopId) {
+    log.info("Fetching available menu items for shop {}", shopId);
+    Set<MenuItem> shopMenuItems = menuService.getAvailableItemIds(shopId);
+    Map<UUID, MenuItem> menuItemMap = shopMenuItems.stream()
+        .collect(Collectors.toMap(MenuItem::id, item -> item));
+    log.debug("Found {} available menu items", shopMenuItems.size());
+
+    List<OrderItem> items = getValidOrderItems(request, menuItemMap);
+    log.info("Order items validated, found {} items", items.size());
+
+    return items;
+  }
+
+  private void validateShopExists(UUID shopId) {
+    if (!shopService.existsById(shopId)) {
+      throw new ShopNotFoundException(shopId);
+    }
+  }
+
+  private Order processOrder(Order order) {
+    QueueAssignmentResult assignment = queueService.assignOrderToQueue(order);
+    order.assignQueue(assignment.queueNumber());
+
+    Order savedOrder = orderRepository.save(order);
+    log.debug("Saved order with ID {}", order.getId());
+
+    return savedOrder;
+  }
 
   @Override
   public void serveOrder(Long orderId) {
@@ -112,12 +126,14 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
     Order order = orderRepository.findById(orderId)
         .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-    if (!order.isWaiting()) {
-      log.warn("Cannot serve order {} because it is in status {}", orderId, order.getStatus());
-      throw new InvalidOrderStateException(orderId, order.getStatus(), OrderStatus.WAITING);
-    }
+    validateOrderStatus(order);
 
     order.markAsServed();
+
+    serveOrderWithLock(orderId, order);
+  }
+
+  private void serveOrderWithLock(Long orderId, Order order) {
     String lockKey = QueueLockKey.of(order.getShopId());
 
     lock.doWithLock(

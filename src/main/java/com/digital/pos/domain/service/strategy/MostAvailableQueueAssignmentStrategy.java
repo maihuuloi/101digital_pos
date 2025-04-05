@@ -12,11 +12,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStrategy {
 
-  public static final String NAME = "MOST_AVAILABLE";
-
   @Override
   public boolean supports(ShopConfiguration config) {
-    return NAME.equalsIgnoreCase(config.queueStrategy());
+    return StrategyType.MOST_AVAILABLE.name().equalsIgnoreCase(config.queueStrategy());
   }
 
   @Override
@@ -25,14 +23,22 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
     Map<Integer, Long> currentCounts = ctx.waitingOrders().stream()
         .collect(Collectors.groupingBy(Order::getQueueNumber, Collectors.counting()));
 
+    int selectedQueue = findQueueWithMostAvailableSlots(capacities, currentCounts);
+
+    if (selectedQueue == -1) {
+      throw new AllQueueFullException(ctx.order().getShopId());
+    }
+
+    return new QueueAssignmentResult(selectedQueue);
+  }
+
+  private int findQueueWithMostAvailableSlots(Map<Integer, Integer> capacities, Map<Integer, Long> currentCounts) {
     int selectedQueue = -1;
-    int maxAvailableSlots = Integer.MIN_VALUE;
+    int maxAvailableSlots = 0;
 
     for (Map.Entry<Integer, Integer> entry : capacities.entrySet()) {
       int queueNumber = entry.getKey();
-      int maxCapacity = entry.getValue();
-      long currentLoad = currentCounts.getOrDefault(queueNumber, 0L);
-      int availableSlots = maxCapacity - (int) currentLoad;
+      int availableSlots = calculateAvailableSlots(entry.getValue(), currentCounts.getOrDefault(queueNumber, 0L));
 
       if (availableSlots > maxAvailableSlots) {
         maxAvailableSlots = availableSlots;
@@ -40,10 +46,10 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
       }
     }
 
-    if (selectedQueue == -1 || maxAvailableSlots <= 0) {
-      throw new AllQueueFullException(ctx.order().getShopId());
-    }
+    return selectedQueue;
+  }
 
-    return new QueueAssignmentResult(selectedQueue);
+  private int calculateAvailableSlots(int maxCapacity, long currentLoad) {
+    return maxCapacity - (int) currentLoad;
   }
 }
