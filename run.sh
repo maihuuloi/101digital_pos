@@ -1,29 +1,33 @@
 #!/bin/bash
 
-APP_NAME="pos"
-JAR_FILE="target/${APP_NAME}-0.0.1-SNAPSHOT.jar"
-IMAGE_NAME="pos-service"
+set -e
 
-echo "🔨 Step 1: Building Spring Boot App..."
+# App settings
+APP_NAME="process-order-service"
+JAR_NAME="app.jar"
+DOCKER_IMAGE_NAME="process-order-service:latest"
+
+# Step 1: Clean & package with Maven
+echo "🧱 Building the project with Maven..."
 ./mvnw clean package -DskipTests
 
-if [ ! -f "$JAR_FILE" ]; then
-  echo "❌ Build failed: JAR file not found!"
-  exit 1
-fi
+# Step 2: Create the build/libs directory if it doesn't exist
+mkdir -p build/libs
 
-echo "🐘 Step 2: Starting PostgreSQL with Docker Compose..."
-docker-compose up -d
+# Step 3: Copy the JAR to build context
+echo "📦 Copying JAR to Docker context..."
+cp target/*.jar build/libs/$JAR_NAME
 
-echo "⏳ Waiting for PostgreSQL to start..."
-sleep 10
+# Step 4: Remove old Docker images
+echo "🗑️ Removing old Docker images..."
+docker rmi -f $(docker images -q $DOCKER_IMAGE_NAME) || true
 
-echo "🐳 Step 3: Building Docker image for the app..."
-docker build -t $IMAGE_NAME .
+# Step 5: Build the Docker image
+echo "🐳 Building Docker image: $DOCKER_IMAGE_NAME..."
+docker build -t $DOCKER_IMAGE_NAME .
 
-echo "🚀 Step 4: Running app container..."
-docker run --rm \
-  --name pos-service \
-  --network pos_default \  # join Docker Compose network
-  -p 8080:8080 \
-  $IMAGE_NAME
+#Step 6: Clean up old containers
+docker-compose down
+# Step 7: Run Docker Compose
+echo "🚀 Starting services with Docker Compose..."
+docker-compose up --build

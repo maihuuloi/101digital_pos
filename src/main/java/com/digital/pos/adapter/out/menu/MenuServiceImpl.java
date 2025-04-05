@@ -7,15 +7,18 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class MenuServiceImpl implements MenuService {
   private MenuClient menuClient;
 
   @Override
   public Set<MenuItem> getAvailableItemIds(UUID shopId) {
+    log.debug("Fetching available menu items for shop {}", shopId);
     List<MenuItemResponse> allItems = menuClient.getMenuItemsByShopId(shopId);
 
     return allItems.stream()

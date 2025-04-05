@@ -10,6 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "menu-service", url = "${clients.menu-service.url}")
 public interface MenuClient {
 
-  @GetMapping("/api/shops/{shopId}/menu")
+  @GetMapping("/api/shops/{shopId}/menu/available-items")
   List<MenuItemResponse> getMenuItemsByShopId(@PathVariable("shopId") UUID shopId);
 }

@@ -1,14 +1,18 @@
 package com.digital.pos.application.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.any;
 
-import com.digital.coffeeshop.model.CreateOrderRequest;
-import com.digital.coffeeshop.model.OrderCreatedResponse;
-import com.digital.coffeeshop.model.OrderItemRequest;
+import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
+import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
+import com.digital.pos.adapter.in.rest.model.OrderItemRequest;
 import com.digital.pos.application.mapper.OrderMapper;
 import com.digital.pos.application.port.out.MenuService;
 import com.digital.pos.application.port.out.OrderRepository;
@@ -20,8 +24,10 @@ import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderItem;
 import com.digital.pos.domain.model.OrderStatus;
 import com.digital.pos.domain.model.QueueAssignmentResult;
+import com.digital.pos.domain.model.ShopConfiguration;
 import com.digital.pos.domain.service.QueueAssignmentEngine;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -33,148 +39,118 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class OrderUseCaseImplTest {
 
-  @Mock private OrderRepository orderRepository;
-  @Mock private QueueAssignmentEngine queueAssignmentEngine;
   @Mock private ShopService shopService;
   @Mock private MenuService menuService;
+  @Mock private QueueAssignmentEngine queueAssignmentEngine;
+  @Mock private OrderRepository orderRepository;
   @Mock private OrderMapper orderMapper;
+  @Mock private ProcessOrderApplicationService processOrderApplicationService;
 
   @InjectMocks private OrderUseCaseImpl orderUseCase;
 
   @Test
   void createOrder_shouldSucceed_whenShopAndItemsAreValid() {
-    // Arrange
+    // Given
     UUID shopId = UUID.randomUUID();
-    UUID item1 = UUID.randomUUID();
-    UUID item2 = UUID.randomUUID();
+    UUID menuItemId = UUID.randomUUID();
 
-    // Input request
-    CreateOrderRequest request = new CreateOrderRequest();
-    request.setShopId(shopId);
-    request.setItems(List.of(
-        new OrderItemRequest(item1, 2),
-        new OrderItemRequest(item2, 1)
-    ));
+    OrderItemRequest itemRequest = new OrderItemRequest(menuItemId, 2);
+    CreateOrderRequest request = new CreateOrderRequest(shopId, List.of(itemRequest));
 
-    // Shop validation
-    when(shopService.existsById(shopId)).thenReturn(true);
+    MenuItem menuItem = new MenuItem(menuItemId, "Latte", 30.0, true);
+    Set<MenuItem> availableItems = Set.of(menuItem);
 
-    // Menu item enrichment
-    Set<MenuItem> menuItems = Set.of(
-        new MenuItem(item1, "Espresso", 30.0, true),
-        new MenuItem(item2, "Croissant", 25.0, true)
-    );
-    when(menuService.getAvailableItemIds(shopId)).thenReturn(menuItems);
-
-    // Queue assignment
+    OrderItem orderItem = new OrderItem(menuItemId, 2, 30.0);
+    Order orderBeforeAssignment = Order.createNew(shopId, List.of(orderItem));
     QueueAssignmentResult assignment = new QueueAssignmentResult(1, 3);
-    when(queueAssignmentEngine.assignToQueue(any(Order.class))).thenReturn(assignment);
 
-    // Domain Order created and saved
-    Order savedOrder = new Order();
-    savedOrder.setId(UUID.randomUUID());
-    savedOrder.setShopId(shopId);
-    savedOrder.setItems(List.of(
-        new OrderItem(item1, 2, 30.0),
-        new OrderItem(item2, 1, 25.0)
-    ));
+    Order orderAfterAssignment = Order.createNew(shopId, List.of(orderItem));
+    orderAfterAssignment.assignQueue(1, 3);
+
+    Order savedOrder = Order.createNew(shopId, List.of(orderItem));
     savedOrder.assignQueue(1, 3);
-    savedOrder.setStatus(OrderStatus.PENDING);
 
+    OrderCreatedResponse expectedResponse = new OrderCreatedResponse(savedOrder.getId(), 1, 3, 6);
+
+    // When
+    when(shopService.existsById(shopId)).thenReturn(true);
+    when(menuService.getAvailableItemIds(shopId)).thenReturn(availableItems);
+    when(processOrderApplicationService.assignOrderToQueue(any(Order.class))).thenReturn(assignment);
     when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
-
-    // Response
-    OrderCreatedResponse expectedResponse = new OrderCreatedResponse()
-        .orderId(savedOrder.getId())
-        .queueNumber(1)
-        .position(3)
-        .estimatedWaitMinutes(4);
-
     when(orderMapper.toOrderCreatedResponse(savedOrder)).thenReturn(expectedResponse);
 
-    // Act
-    OrderCreatedResponse actualResponse = orderUseCase.createOrder(request);
+    // Then
+    OrderCreatedResponse result = orderUseCase.createOrder(request);
 
-    // Assert
-    assertNotNull(actualResponse);
-    assertEquals(expectedResponse.getOrderId(), actualResponse.getOrderId());
-    assertEquals(expectedResponse.getQueueNumber(), actualResponse.getQueueNumber());
-    assertEquals(expectedResponse.getPosition(), actualResponse.getPosition());
-    assertEquals(expectedResponse.getEstimatedWaitMinutes(), actualResponse.getEstimatedWaitMinutes());
+    assertNotNull(result);
+    assertEquals(expectedResponse, result);
 
     // Verify interactions
     verify(shopService).existsById(shopId);
     verify(menuService).getAvailableItemIds(shopId);
-    verify(queueAssignmentEngine).assignToQueue(any(Order.class));
+    verify(processOrderApplicationService).assignOrderToQueue(any(Order.class));
     verify(orderRepository).save(any(Order.class));
     verify(orderMapper).toOrderCreatedResponse(savedOrder);
   }
 
-
   @Test
   void createOrder_shouldThrowException_whenShopIsNotFound() {
-    // Arrange
-    UUID nonExistentShopId = UUID.randomUUID();
+    // Given
+    UUID shopId = UUID.randomUUID();
     UUID menuItemId = UUID.randomUUID();
 
-    CreateOrderRequest request = new CreateOrderRequest();
-    request.setShopId(nonExistentShopId);
-    request.setItems(List.of(new OrderItemRequest(menuItemId, 1)));
+    OrderItemRequest itemRequest = new OrderItemRequest(menuItemId, 1);
+    CreateOrderRequest request = new CreateOrderRequest(shopId, List.of(itemRequest));
 
-    // Mock behavior: shop does not exist
-    when(shopService.existsById(nonExistentShopId)).thenReturn(false);
+    when(shopService.existsById(shopId)).thenReturn(false);
 
-    // Act & Assert
-    ShopNotFoundException exception = assertThrows(
-        ShopNotFoundException.class,
-        () -> orderUseCase.createOrder(request)
+    // When + Then
+    ShopNotFoundException exception = assertThrows(ShopNotFoundException.class, () -> {
+      orderUseCase.createOrder(request);
+    });
+
+    assertEquals(shopId, exception.getShopId());
+
+    // Ensure no downstream services were called
+    verify(shopService).existsById(shopId);
+    verifyNoMoreInteractions(
+        shopService,
+        menuService,
+        processOrderApplicationService,
+        orderRepository,
+        orderMapper
     );
-
-    assertEquals("Shop not found: " + nonExistentShopId, exception.getMessage());
-
-    // Verify no further interactions
-    verify(menuService, never()).getAvailableItemIds(any());
-    verify(orderRepository, never()).save(any());
-    verify(queueAssignmentEngine, never()).assignToQueue(any());
-    verify(orderMapper, never()).toOrderCreatedResponse(any());
   }
+
   @Test
   void createOrder_shouldThrowException_whenMenuItemIsInvalid() {
-    // Arrange
+    // Given
     UUID shopId = UUID.randomUUID();
-    UUID validMenuItemId = UUID.randomUUID();
-    UUID invalidMenuItemId = UUID.randomUUID(); // This will be considered invalid
+    UUID invalidMenuItemId = UUID.randomUUID(); // Item we request that does not exist
+    UUID validMenuItemId = UUID.randomUUID();   // Only this one exists
 
-    // Build the request with one valid and one invalid menu item.
-    CreateOrderRequest request = new CreateOrderRequest();
-    request.setShopId(shopId);
-    request.setItems(List.of(
-        new OrderItemRequest(validMenuItemId, 1),
-        new OrderItemRequest(invalidMenuItemId, 2)
-    ));
+    OrderItemRequest itemRequest = new OrderItemRequest(invalidMenuItemId, 1);
+    CreateOrderRequest request = new CreateOrderRequest(shopId, List.of(itemRequest));
 
-    // Mock shop existence
+    Set<MenuItem> availableItems = Set.of(
+        new MenuItem(validMenuItemId, "Espresso", 25.0, true)
+    );
+
     when(shopService.existsById(shopId)).thenReturn(true);
+    when(menuService.getAvailableItemIds(shopId)).thenReturn(availableItems);
 
-    // Simulate menu service returning only the valid menu item.
-    Set<MenuItem> availableMenuItems = Set.of(
-        new MenuItem(validMenuItemId, "Espresso", 3.0, true)
-    );
-    when(menuService.getAvailableItemIds(shopId)).thenReturn(availableMenuItems);
+    // When & Then
+    MenuItemNotFoundException exception = assertThrows(MenuItemNotFoundException.class, () -> {
+      orderUseCase.createOrder(request);
+    });
 
-    // Act & Assert: The call should throw a MenuItemNotFoundException for the invalidMenuItemId.
-    MenuItemNotFoundException exception = assertThrows(
-        MenuItemNotFoundException.class,
-        () -> orderUseCase.createOrder(request)
-    );
-    assertEquals("Menu item not found: " + invalidMenuItemId, exception.getMessage());
+    assertEquals(invalidMenuItemId, exception.getMenuItemId());
 
-    // Verify that no order is persisted and no further processing is done.
-    verify(orderRepository, never()).save(any());
-    verify(queueAssignmentEngine, never()).assignToQueue(any());
-    verify(orderMapper, never()).toOrderCreatedResponse(any());
+    // Verify interactions
+    verify(shopService).existsById(shopId);
+    verify(menuService).getAvailableItemIds(shopId);
+    verifyNoInteractions(processOrderApplicationService, orderRepository, orderMapper);
   }
-
   // createOrder_shouldPersistOrder_whenValidRequestGiven
   // createOrder_shouldAssignOrderToQueue_whenValidRequestGiven
   // createOrder_shouldReturnResponseWithCorrectDetails_whenOrderIsCreated

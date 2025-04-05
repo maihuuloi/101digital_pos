@@ -7,12 +7,14 @@ import com.digital.pos.domain.model.ShopConfiguration;
 import feign.FeignException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 @RequiredArgsConstructor
 @Component
+@Slf4j
 public class ShopServiceImpl implements ShopService {
 
   private final ShopClient shopClient;
@@ -33,6 +35,7 @@ public class ShopServiceImpl implements ShopService {
   @Override
   @Cacheable(value = "shop-config", key = "#shopId")
   public ShopConfiguration getShopConfig(UUID shopId) {
+    log.debug("Fetching shop config for {}", shopId);
     try {
       ShopConfigResponse configResponse = shopClient.getShopConfiguration(shopId);
       return new ShopConfiguration(configResponse.shopId(), configResponse.queueStrategy(),

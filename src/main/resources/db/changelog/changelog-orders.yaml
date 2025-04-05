@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 001-create-orders-table
-      author: chatgpt
+      author: loimai
       changes:
         - createTable:
             tableName: orders
@@ -54,8 +54,11 @@ databaseChangeLog:
 
   - changeSet:
       id: 002-create-order-items-table
-      author: chatgpt
+      author: loimai
       changes:
+        - createSequence:
+            sequenceName: order_items_seq
+            startValue: 1
         - createTable:
             tableName: order_items
             columns:

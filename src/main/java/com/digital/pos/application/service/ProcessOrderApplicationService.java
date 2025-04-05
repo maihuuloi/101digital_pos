@@ -10,9 +10,12 @@ import com.digital.pos.domain.service.QueueAssignmentEngine;
 import com.digital.pos.domain.service.strategy.QueueAssignmentStrategy;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Component
 @RequiredArgsConstructor
+@Slf4j
 public class ProcessOrderApplicationService {
 
   private final ShopService shopService;
@@ -20,9 +23,15 @@ public class ProcessOrderApplicationService {
   private final QueueAssignmentEngine queueAssignmentEngine;
 
   public QueueAssignmentResult assignOrderToQueue(Order order) {
-    ShopConfiguration config = shopService.getShopConfig(order.getShopId());
-    List<Order> pending = orderRepository.findByShopIdAndStatus(order.getShopId(), OrderStatus.PENDING);
+    log.debug("Assigning order {} to queue", order.getId());
 
-    return queueAssignmentEngine.assign(order, config, pending);
+    ShopConfiguration config = shopService.getShopConfig(order.getShopId());
+
+    List<Order> pending = orderRepository.findByShopIdAndStatus(order.getShopId(), OrderStatus.PENDING);
+    QueueAssignmentResult assign = queueAssignmentEngine.assign(order, config, pending);
+
+    log.info("Order {} assigned to queue {}", order.getId(), assign.queueNumber());
+
+    return assign;
   }
 }

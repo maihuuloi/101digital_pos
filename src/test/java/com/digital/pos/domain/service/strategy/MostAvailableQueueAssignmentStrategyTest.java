@@ -61,7 +61,7 @@ class MostAvailableQueueAssignmentStrategyTest {
         createOrder(2), createOrder(2)
     );
 
-    Order newOrder = createOrder(null);
+    Order newOrder = createOrder(1);
 
     IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
         strategy.assign(newOrder, config, pendingOrders)
@@ -70,9 +70,11 @@ class MostAvailableQueueAssignmentStrategyTest {
     assertEquals("No available queues found for order assignment", ex.getMessage());
   }
 
+
   private Order createOrder(Integer queueNumber) {
     Order order = mock(Order.class);
     when(order.getQueueNumber()).thenReturn(queueNumber);
     return order;
   }
+
 }

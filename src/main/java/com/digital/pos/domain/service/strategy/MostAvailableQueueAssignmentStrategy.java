@@ -11,13 +11,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStrategy {
 
+  public static final String NAME = "MOST_AVAILABLE";
+
   @Override
   public boolean supports(ShopConfiguration config) {
-    return "MOST_AVAILABLE".equalsIgnoreCase(config.queueStrategy());
+    return NAME.equalsIgnoreCase(config.queueStrategy());
   }
 
   @Override
-  public QueueAssignmentResult assign(Order order,ShopConfiguration config, List<Order> pendingOrders) {
+  public QueueAssignmentResult assign(Order order, ShopConfiguration config, List<Order> pendingOrders) {
     Map<Integer, Integer> capacities = config.queueCapacities();
     Map<Integer, Long> currentCounts = pendingOrders.stream()
         .collect(Collectors.groupingBy(Order::getQueueNumber, Collectors.counting()));
@@ -37,11 +39,11 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
       }
     }
 
-    if (selectedQueue == -1) {
+    if (selectedQueue == -1 || maxAvailableSlots <= 0) {
       throw new IllegalStateException("No available queues found for order assignment");
     }
 
-    int position =  currentCounts.getOrDefault(selectedQueue, 0L).intValue() + 1;
+    int position = currentCounts.getOrDefault(selectedQueue, 0L).intValue() + 1;
 
     return new QueueAssignmentResult(selectedQueue, position);
   }

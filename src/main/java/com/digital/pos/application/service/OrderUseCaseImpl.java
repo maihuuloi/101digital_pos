@@ -13,7 +13,6 @@ import com.digital.pos.domain.model.MenuItem;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderItem;
 import com.digital.pos.domain.model.QueueAssignmentResult;
-import com.digital.pos.domain.service.QueueAssignmentEngine;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,8 +36,10 @@ public class OrderUseCaseImpl implements OrderUseCase {
   private final OrderMapper orderMapper;
 
   @Override
+  @Transactional
   public OrderCreatedResponse createOrder(CreateOrderRequest request) {
     UUID shopId = request.getShopId();
+    log.debug("Creating order for shop {}", shopId);
 
     // Validate shop exists
     if (!shopService.existsById(shopId)) {
@@ -46,11 +47,26 @@ public class OrderUseCaseImpl implements OrderUseCase {
     }
 
     // Convert and validate each item
-    Set<MenuItem> validMenuItemIds = menuService.getAvailableItemIds(shopId);
-    Map<UUID,MenuItem> menuItemMap = validMenuItemIds.stream()
+    log.info("Fetching available menu items for shop {}", shopId);
+    Set<MenuItem> shopMenuItems = menuService.getAvailableItemIds(shopId);
+    Map<UUID,MenuItem> menuItemMap = shopMenuItems.stream()
         .collect(Collectors.toMap(MenuItem::id, item -> item));
+    log.debug("Found {} available menu items", shopMenuItems.size());
+    List<OrderItem> items = getValidOrderItems(request, menuItemMap);
+    log.info("Order items validated, found {} items", items.size());
 
-    List<OrderItem> items = request.getItems().stream()
+    // Create and assign
+    Order order = Order.createNew(shopId, items);
+    QueueAssignmentResult assignment = processOrderApplicationService.assignOrderToQueue(order);
+    order.assignQueue(assignment.queueNumber(), assignment.position());
+
+    Order savedOrder = orderRepository.save(order);
+    log.debug("Saved order with ID {}", order.getId());
+    return orderMapper.toOrderCreatedResponse(savedOrder);
+  }
+
+  private static List<OrderItem> getValidOrderItems(CreateOrderRequest request, Map<UUID, MenuItem> menuItemMap) {
+    return request.getItems().stream()
         .map(itemRequest -> {
           UUID menuItemId = itemRequest.getMenuItemId();
           if (!menuItemMap.containsKey(menuItemId)) {
@@ -60,14 +76,5 @@ public class OrderUseCaseImpl implements OrderUseCase {
           return new OrderItem(menuItemId, itemRequest.getQuantity(), menuItem.price());
         })
         .collect(Collectors.toList());
-
-    // Create and assign
-    Order order = Order.createNew(shopId, items);
-    QueueAssignmentResult assignment = processOrderApplicationService.assignOrderToQueue(order);
-    order.assignQueue(assignment.queueNumber(), assignment.position());
-
-    // Persist
-    Order savedOrder = orderRepository.save(order);
-    return orderMapper.toOrderCreatedResponse(savedOrder);
   }
 }

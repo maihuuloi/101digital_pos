@@ -1,4 +1,4 @@
 databaseChangeLog:
   - include:
-      file: db/changelog/db.changelog-orders.yaml
+      file: changelog-orders.yaml
       relativeToChangelogFile: true

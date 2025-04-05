@@ -1,6 +1,7 @@
 package com.digital.pos.domain.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.QueueAssignmentResult;
 import com.digital.pos.domain.model.ShopConfiguration;
+import com.digital.pos.domain.service.strategy.MostAvailableQueueAssignmentStrategy;
 import com.digital.pos.domain.service.strategy.QueueAssignmentStrategy;
 import java.util.List;
 import java.util.Map;
@@ -22,40 +24,36 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class QueueAssignmentEngineImplTest {
 
   @Mock
-  private QueueAssignmentStrategy shortestStrategy;
-
-  @Mock
   private QueueAssignmentStrategy mostAvailableStrategy;
 
   private QueueAssignmentEngineImpl engine;
 
   @BeforeEach
   void setUp() {
-    engine = new QueueAssignmentEngineImpl(List.of(shortestStrategy, mostAvailableStrategy));
+    engine = new QueueAssignmentEngineImpl(List.of( mostAvailableStrategy));
   }
 
   @Test
   void assign_shouldUseMatchingStrategy_whenOneSupportsConfig() {
     // Arrange
     UUID shopId = UUID.randomUUID();
-    ShopConfiguration config = new ShopConfiguration(shopId, "SHORTEST_QUEUE", Map.of(1, 5, 2, 5, 3, 5));
+    ShopConfiguration config = new ShopConfiguration(shopId,
+        MostAvailableQueueAssignmentStrategy.NAME, Map.of(1, 5, 2, 5, 3, 5));
     Order order = new Order(); // mock or real
     List<Order> pendingOrders = List.of();
 
     QueueAssignmentResult expectedResult = new QueueAssignmentResult(2, 3);
 
-    when(shortestStrategy.supports(config)).thenReturn(true);
-    when(shortestStrategy.assign(order, config, pendingOrders)).thenReturn(expectedResult);
-
-    when(mostAvailableStrategy.supports(config)).thenReturn(false);
+    when(mostAvailableStrategy.supports(config)).thenReturn(true);
+    when(mostAvailableStrategy.assign(order, config, pendingOrders))
+        .thenReturn(expectedResult);
 
     // Act
     QueueAssignmentResult result = engine.assign(order, config, pendingOrders);
 
     // Assert
     assertEquals(expectedResult, result);
-    verify(shortestStrategy).assign(order, config, pendingOrders);
-    verifyNoInteractions(mostAvailableStrategy);
+    verify(mostAvailableStrategy).assign(order, config, pendingOrders);
   }
 
   @Test
@@ -66,7 +64,6 @@ class QueueAssignmentEngineImplTest {
     Order order = new Order();
     List<Order> pendingOrders = List.of();
 
-    when(shortestStrategy.supports(config)).thenReturn(false);
     when(mostAvailableStrategy.supports(config)).thenReturn(false);
 
     // Act & Assert

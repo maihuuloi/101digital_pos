@@ -1,8 +1,15 @@
 package com.digital.pos.adapter.out.db.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -19,12 +26,18 @@ import lombok.Setter;
 public class OrderItemEntity {
 
   @Id
-  @GeneratedValue
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_items_seq")
+  @SequenceGenerator(name = "order_items_seq", sequenceName = "order_items_seq", allocationSize = 1)
+
   private Long id;
 
   private UUID menuItemId;
 
-  private int quantity;
+  private Integer quantity;
 
-  private double price;
+  private Double price;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "order_id", nullable = false)
+  private OrderEntity order;
 }

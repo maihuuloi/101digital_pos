@@ -24,7 +24,6 @@ public class Order {
 
   public static Order createNew(UUID shopId, List<OrderItem> items) {
     Order order = new Order();
-    order.id = UUID.randomUUID();
     order.shopId = shopId;
     order.items = new ArrayList<>(items);
     order.status = OrderStatus.PENDING;
