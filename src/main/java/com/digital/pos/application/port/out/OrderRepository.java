@@ -11,4 +11,8 @@ public interface OrderRepository  {
   Order save(Order any);
 
   List<Order> findByShopIdAndStatus(UUID shopId, OrderStatus orderStatus);
+
+  Optional<Order> findById(Long orderId);
+
+  Long findLivePositionInQueue(Long orderId);
 }

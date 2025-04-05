@@ -1,9 +1,8 @@
 package com.digital.pos.application.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -22,12 +21,10 @@ import com.digital.pos.domain.exception.ShopNotFoundException;
 import com.digital.pos.domain.model.MenuItem;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderItem;
-import com.digital.pos.domain.model.OrderStatus;
 import com.digital.pos.domain.model.QueueAssignmentResult;
-import com.digital.pos.domain.model.ShopConfiguration;
 import com.digital.pos.domain.service.QueueAssignmentEngine;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -39,14 +36,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class OrderUseCaseImplTest {
 
-  @Mock private ShopService shopService;
-  @Mock private MenuService menuService;
-  @Mock private QueueAssignmentEngine queueAssignmentEngine;
-  @Mock private OrderRepository orderRepository;
-  @Mock private OrderMapper orderMapper;
-  @Mock private ProcessOrderApplicationService processOrderApplicationService;
+  @Mock
+  private ShopService shopService;
+  @Mock
+  private MenuService menuService;
+  @Mock
+  private QueueAssignmentEngine queueAssignmentEngine;
+  @Mock
+  private OrderRepository orderRepository;
+  @Mock
+  private OrderMapper orderMapper;
+  @Mock
+  private ProcessOrderApplicationService processOrderApplicationService;
 
-  @InjectMocks private OrderUseCaseImpl orderUseCase;
+  @InjectMocks
+  private OrderUseCaseImpl orderUseCase;
 
   @Test
   void createOrder_shouldSucceed_whenShopAndItemsAreValid() {
@@ -62,13 +66,13 @@ class OrderUseCaseImplTest {
 
     OrderItem orderItem = new OrderItem(menuItemId, 2, 30.0);
     Order orderBeforeAssignment = Order.createNew(shopId, List.of(orderItem));
-    QueueAssignmentResult assignment = new QueueAssignmentResult(1, 3);
+    QueueAssignmentResult assignment = new QueueAssignmentResult(1);
 
     Order orderAfterAssignment = Order.createNew(shopId, List.of(orderItem));
-    orderAfterAssignment.assignQueue(1, 3);
+    orderAfterAssignment.assignQueue(1);
 
     Order savedOrder = Order.createNew(shopId, List.of(orderItem));
-    savedOrder.assignQueue(1, 3);
+    savedOrder.assignQueue(1);
 
     OrderCreatedResponse expectedResponse = new OrderCreatedResponse(savedOrder.getId(), 1, 3, 6);
 
@@ -154,4 +158,21 @@ class OrderUseCaseImplTest {
   // createOrder_shouldPersistOrder_whenValidRequestGiven
   // createOrder_shouldAssignOrderToQueue_whenValidRequestGiven
   // createOrder_shouldReturnResponseWithCorrectDetails_whenOrderIsCreated
+
+  @Test
+  void serveOrder_shouldMarkOrderAsServed_whenOrderIsWaiting() {
+    // Given
+    Long orderId = UUID.randomUUID();
+    Order mockOrder = mock(Order.class);
+
+    when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
+    when(mockOrder.isWaiting()).thenReturn(true);
+
+    // When
+    orderUseCase.serveOrder(orderId);
+
+    // Then
+    verify(mockOrder).markAsServed();
+    verify(orderRepository).save(mockOrder);
+  }
 }

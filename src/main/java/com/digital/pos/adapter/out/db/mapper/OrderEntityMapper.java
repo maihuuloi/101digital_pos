@@ -15,7 +15,6 @@ public class OrderEntityMapper {
     entity.setId(order.getId());
     entity.setShopId(order.getShopId());
     entity.setQueueNumber(order.getQueueNumber());
-    entity.setPositionInQueue(order.getPositionInQueue());
     entity.setStatus(order.getStatus());
 
     List<OrderItemEntity> itemEntities = order.getItems().stream()
@@ -31,14 +30,13 @@ public class OrderEntityMapper {
         .map(i -> new OrderItem(i.getMenuItemId(), i.getQuantity(), i.getPrice()))
         .toList();
 
-    return new Order(
-        entity.getId(),
-        entity.getShopId(),
-        items,
-        entity.getQueueNumber(),
-        entity.getPositionInQueue(),
-        entity.getStatus()
-    );
+    return Order.builder()
+        .id(entity.getId())
+        .shopId(entity.getShopId())
+        .queueNumber(entity.getQueueNumber())
+        .status(entity.getStatus())
+        .items(items)
+        .build();
   }
 
   public List<Order> toDomainList(List<OrderEntity> entities) {

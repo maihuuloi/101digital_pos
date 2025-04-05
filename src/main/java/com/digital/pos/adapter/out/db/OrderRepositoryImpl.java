@@ -7,6 +7,7 @@ import com.digital.pos.application.port.out.OrderRepository;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderStatus;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,18 @@ public class OrderRepositoryImpl implements OrderRepository {
 
     List<OrderEntity> orderEntities = jpaOrderRepository.findByShopIdAndStatus(shopId, orderStatus);
     return mapper.toDomainList(orderEntities);
+  }
+
+  @Override
+  public Optional<Order> findById(Long orderId) {
+    return jpaOrderRepository.findById(orderId)
+        .map(mapper::toDomain);
+  }
+
+  @Override
+  public Long findLivePositionInQueue(Long orderId) {
+
+    return jpaOrderRepository.findLivePositionInQueue(orderId);
   }
 
 }

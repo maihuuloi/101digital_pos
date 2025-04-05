@@ -3,7 +3,6 @@ package com.digital.pos.domain.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.digital.pos.domain.model.Order;
@@ -42,18 +41,18 @@ class QueueAssignmentEngineImplTest {
     Order order = new Order(); // mock or real
     List<Order> pendingOrders = List.of();
 
-    QueueAssignmentResult expectedResult = new QueueAssignmentResult(2, 3);
+    QueueAssignmentResult expectedResult = new QueueAssignmentResult(2);
 
     when(mostAvailableStrategy.supports(config)).thenReturn(true);
-    when(mostAvailableStrategy.assign(order, config, pendingOrders))
+    when(mostAvailableStrategy.assign(new QueueAssignmentContext(order, config, pendingOrders)))
         .thenReturn(expectedResult);
 
     // Act
-    QueueAssignmentResult result = engine.assign(order, config, pendingOrders);
+    QueueAssignmentResult result = engine.assign(new QueueAssignmentContext(order, config, pendingOrders));
 
     // Assert
     assertEquals(expectedResult, result);
-    verify(mostAvailableStrategy).assign(order, config, pendingOrders);
+    verify(mostAvailableStrategy).assign(new QueueAssignmentContext(order, config, pendingOrders));
   }
 
   @Test
@@ -68,7 +67,7 @@ class QueueAssignmentEngineImplTest {
 
     // Act & Assert
     IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-        engine.assign(order, config, pendingOrders)
+        engine.assign(new QueueAssignmentContext(order, config, pendingOrders))
     );
 
     assertEquals("No matching strategy for shop", ex.getMessage());

@@ -1,9 +1,10 @@
 package com.digital.pos.domain.service.strategy;
 
+import com.digital.pos.domain.exception.AllQueueFullException;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.QueueAssignmentResult;
 import com.digital.pos.domain.model.ShopConfiguration;
-import java.util.List;
+import com.digital.pos.domain.service.QueueAssignmentContext;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
@@ -18,10 +19,9 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
     return NAME.equalsIgnoreCase(config.queueStrategy());
   }
 
-  @Override
-  public QueueAssignmentResult assign(Order order, ShopConfiguration config, List<Order> pendingOrders) {
-    Map<Integer, Integer> capacities = config.queueCapacities();
-    Map<Integer, Long> currentCounts = pendingOrders.stream()
+  public QueueAssignmentResult assign(QueueAssignmentContext queueAssignmentContext) {
+    Map<Integer, Integer> capacities = queueAssignmentContext.config().queueCapacities();
+    Map<Integer, Long> currentCounts = queueAssignmentContext.pendingOrders().stream()
         .collect(Collectors.groupingBy(Order::getQueueNumber, Collectors.counting()));
 
     int selectedQueue = -1;
@@ -40,11 +40,11 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
     }
 
     if (selectedQueue == -1 || maxAvailableSlots <= 0) {
-      throw new IllegalStateException("No available queues found for order assignment");
+      throw new AllQueueFullException(queueAssignmentContext.order().getShopId());
     }
 
     int position = currentCounts.getOrDefault(selectedQueue, 0L).intValue() + 1;
 
-    return new QueueAssignmentResult(selectedQueue, position);
+    return new QueueAssignmentResult(selectedQueue);
   }
 }

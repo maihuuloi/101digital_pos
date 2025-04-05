@@ -1,5 +1,6 @@
 package com.digital.pos.exception;
 
+import com.digital.pos.domain.exception.AllQueueFullException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -11,7 +12,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 @Log4j2
 public class RestControllerAdvice {
-
+  @ExceptionHandler(AllQueueFullException.class)
+  public ResponseEntity<ErrorResponse> handleAllQueueFull(AllQueueFullException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(new ErrorResponse("ALL_QUEUES_FULL", ex.getMessage()));
+  }
 
   @ExceptionHandler(EntityNotFoundException.class)
   public ResponseEntity<?> handleNotFound(EntityNotFoundException ex) {

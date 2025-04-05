@@ -3,12 +3,15 @@ databaseChangeLog:
       id: 001-create-orders-table
       author: loimai
       changes:
+        - createSequence:
+            sequenceName: orders_seq
+            startValue: 1
         - createTable:
             tableName: orders
             columns:
               - column:
                   name: id
-                  type: UUID
+                  type: BIGINT
                   constraints:
                     primaryKey: true
                     nullable: false
@@ -19,9 +22,6 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: queue_number
-                  type: INT
-              - column:
-                  name: position_in_queue
                   type: INT
               - column:
                   name: status
@@ -71,7 +71,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: order_id
-                  type: UUID
+                  type: BIGINT
                   constraints:
                     nullable: false
               - column:

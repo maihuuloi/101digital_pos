@@ -59,9 +59,8 @@ paths:
           required: true
           description: The ID of the order
           schema:
-            type: string
-            format: uuid
-            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            type: integer
+            format: int64
       responses:
         "200":
           description: Successful operation
@@ -93,9 +92,8 @@ paths:
           required: true
           description: The ID of the order to cancel
           schema:
-            type: string
-            format: uuid
-            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            type: integer
+            format: int64
       responses:
         "204":
           description: Order canceled successfully (no content)
@@ -124,9 +122,8 @@ paths:
           required: true
           description: The ID of the order to serve
           schema:
-            type: string
-            format: uuid
-            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            type: integer
+            format: int64
       responses:
         "204":
           description: Order served successfully (no content)
@@ -225,16 +222,14 @@ components:
       type: object
       properties:
         orderId:
-          type: string
-          format: uuid
-          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          example: "abc123e4-5678-90ab-cdef-1234567890ab"
+          type: integer
+          format: int64
         queueNumber:
           type: integer
           minimum: 1
           maximum: 3
           example: 1
-        position:
+        livePosition:
           type: integer
           minimum: 1
           description: The position of the order in the queue (1-based)
@@ -255,10 +250,8 @@ components:
       type: object
       properties:
         orderId:
-          type: string
-          format: uuid
-          pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-          example: "abc123e4-5678-90ab-cdef-1234567890ab"
+          type: integer
+          format: int64
         status:
           type: string
           enum:

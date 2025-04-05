@@ -4,6 +4,7 @@ import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
 import com.digital.pos.application.mapper.OrderMapper;
 import com.digital.pos.application.port.in.OrderUseCase;
+import com.digital.pos.application.port.out.LockService;
 import com.digital.pos.application.port.out.MenuService;
 import com.digital.pos.application.port.out.OrderRepository;
 import com.digital.pos.application.port.out.ShopService;
@@ -13,6 +14,7 @@ import com.digital.pos.domain.model.MenuItem;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderItem;
 import com.digital.pos.domain.model.QueueAssignmentResult;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +36,7 @@ public class OrderUseCaseImpl implements OrderUseCase {
   private final ShopService shopService; // External service
   private final MenuService menuService; // External service
   private final OrderMapper orderMapper;
+  private final LockService lock;
 
   @Override
   @Transactional
@@ -52,17 +55,35 @@ public class OrderUseCaseImpl implements OrderUseCase {
     Map<UUID,MenuItem> menuItemMap = shopMenuItems.stream()
         .collect(Collectors.toMap(MenuItem::id, item -> item));
     log.debug("Found {} available menu items", shopMenuItems.size());
+
     List<OrderItem> items = getValidOrderItems(request, menuItemMap);
     log.info("Order items validated, found {} items", items.size());
-
-    // Create and assign
     Order order = Order.createNew(shopId, items);
+
+
+    String lockKey = QueueLockKey.of(shopId);
+    Order savedOrder = lock.doWithLock(lockKey,
+        Duration.ofSeconds(5),
+        Duration.ofSeconds(10),
+        () -> processOrder(order)
+    );
+    log.debug("Order {} created and assigned to queue", savedOrder.getId());
+
+    Long livePosition = processOrderApplicationService.getLivePosition(savedOrder);
+    log.info("Order {} live position in queue is {}", savedOrder.getId(), livePosition);
+
+    return orderMapper.toOrderCreatedResponse(savedOrder, livePosition);
+  }
+
+  private Order processOrder(Order order) {
+    // Create and assign
     QueueAssignmentResult assignment = processOrderApplicationService.assignOrderToQueue(order);
-    order.assignQueue(assignment.queueNumber(), assignment.position());
+    order.assignQueue(assignment.queueNumber());
 
     Order savedOrder = orderRepository.save(order);
     log.debug("Saved order with ID {}", order.getId());
-    return orderMapper.toOrderCreatedResponse(savedOrder);
+
+    return savedOrder;
   }
 
   private static List<OrderItem> getValidOrderItems(CreateOrderRequest request, Map<UUID, MenuItem> menuItemMap) {
@@ -77,4 +98,27 @@ public class OrderUseCaseImpl implements OrderUseCase {
         })
         .collect(Collectors.toList());
   }
+
+
+  @Override
+  public void serveOrder(Long orderId) {
+
+    log.info("Serving order {}", orderId);
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new IllegalStateException("Order not found"));
+    if (order.isWaiting()) {
+      order.markAsServed();
+      String lockKey = QueueLockKey.of(order.getShopId());
+      lock.doWithLock(lockKey,
+          Duration.ofSeconds(5),
+          Duration.ofSeconds(10),
+          () -> orderRepository.save(order)
+      );
+
+      log.debug("Order {} marked as served", orderId);
+    } else {
+      log.warn("Order {} is not in a state to be served", orderId);
+    }
+  }
+
 }

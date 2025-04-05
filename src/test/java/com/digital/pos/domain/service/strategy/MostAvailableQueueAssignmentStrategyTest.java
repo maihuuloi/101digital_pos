@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.QueueAssignmentResult;
 import com.digital.pos.domain.model.ShopConfiguration;
+import com.digital.pos.domain.service.QueueAssignmentContext;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -45,10 +46,10 @@ class MostAvailableQueueAssignmentStrategyTest {
 
     Order newOrder = createOrder(null); // unassigned
 
-    QueueAssignmentResult result = strategy.assign(newOrder, config, pendingOrders);
+    QueueAssignmentResult result = strategy.assign(new QueueAssignmentContext(newOrder, config, pendingOrders));
 
     assertEquals(2, result.queueNumber());
-    assertEquals(4, result.position()); // 3 existing orders → position 4
+    assertEquals(4, result.livePosition()); // 3 existing orders → position 4
   }
 
   @Test
@@ -64,7 +65,7 @@ class MostAvailableQueueAssignmentStrategyTest {
     Order newOrder = createOrder(1);
 
     IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-        strategy.assign(newOrder, config, pendingOrders)
+        strategy.assign(new QueueAssignmentContext(newOrder, config, pendingOrders))
     );
 
     assertEquals("No available queues found for order assignment", ex.getMessage());

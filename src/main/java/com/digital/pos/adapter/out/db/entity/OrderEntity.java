@@ -8,10 +8,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,14 +28,17 @@ import lombok.Setter;
 public class OrderEntity {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  private UUID id;
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orders_seq")
+  @SequenceGenerator(
+      name = "orders_seq",
+      sequenceName = "orders_seq",
+      allocationSize = 1)
+  private Long id;
 
   private UUID shopId;
 
   private Integer queueNumber;
 
-  private Integer positionInQueue;
 
   @Enumerated(EnumType.STRING)
   private OrderStatus status;

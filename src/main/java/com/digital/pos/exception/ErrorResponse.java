@@ -10,5 +10,5 @@ import lombok.Data;
 public class ErrorResponse {
 
   private String code;          // e.g. "USER_NOT_FOUND"
-  private String message;       // e.g. "User not found with mobile: +84..."
+  private String message;
 }
