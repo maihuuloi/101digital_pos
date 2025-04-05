@@ -8,11 +8,14 @@ import com.digital.pos.application.port.out.LockService;
 import com.digital.pos.application.port.out.MenuService;
 import com.digital.pos.application.port.out.OrderRepository;
 import com.digital.pos.application.port.out.ShopService;
+import com.digital.pos.domain.exception.InvalidOrderStateException;
 import com.digital.pos.domain.exception.MenuItemNotFoundException;
+import com.digital.pos.domain.exception.OrderNotFoundException;
 import com.digital.pos.domain.exception.ShopNotFoundException;
 import com.digital.pos.domain.model.MenuItem;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderItem;
+import com.digital.pos.domain.model.OrderStatus;
 import com.digital.pos.domain.model.QueueAssignmentResult;
 import java.time.Duration;
 import java.util.List;
@@ -102,23 +105,29 @@ public class OrderUseCaseImpl implements OrderUseCase {
 
   @Override
   public void serveOrder(Long orderId) {
+    log.info("Attempting to serve order {}", orderId);
 
-    log.info("Serving order {}", orderId);
     Order order = orderRepository.findById(orderId)
-        .orElseThrow(() -> new IllegalStateException("Order not found"));
-    if (order.isWaiting()) {
-      order.markAsServed();
-      String lockKey = QueueLockKey.of(order.getShopId());
-      lock.doWithLock(lockKey,
-          Duration.ofSeconds(5),
-          Duration.ofSeconds(10),
-          () -> orderRepository.save(order)
-      );
+        .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-      log.debug("Order {} marked as served", orderId);
-    } else {
-      log.warn("Order {} is not in a state to be served", orderId);
+    if (!order.isWaiting()) {
+      log.warn("Cannot serve order {} because it is in status {}", orderId, order.getStatus());
+      throw new InvalidOrderStateException(orderId, order.getStatus(), OrderStatus.WAITING);
     }
+
+    order.markAsServed();
+    String lockKey = QueueLockKey.of(order.getShopId());
+
+    lock.doWithLock(
+        lockKey,
+        Duration.ofSeconds(5),
+        Duration.ofSeconds(10),
+        () -> {
+          orderRepository.save(order);
+          log.debug("Order {} successfully marked as SERVED", orderId);
+          return null;
+        }
+    );
   }
 
 }

@@ -73,4 +73,6 @@ class QueueAssignmentEngineImplTest {
     assertEquals("No matching strategy for shop", ex.getMessage());
   }
 
+
+
 }

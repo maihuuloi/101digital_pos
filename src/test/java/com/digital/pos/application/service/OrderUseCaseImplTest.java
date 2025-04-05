@@ -1,6 +1,7 @@
 package com.digital.pos.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -18,11 +19,14 @@ import com.digital.pos.application.port.out.LockService;
 import com.digital.pos.application.port.out.MenuService;
 import com.digital.pos.application.port.out.OrderRepository;
 import com.digital.pos.application.port.out.ShopService;
+import com.digital.pos.domain.exception.InvalidOrderStateException;
 import com.digital.pos.domain.exception.MenuItemNotFoundException;
+import com.digital.pos.domain.exception.OrderNotFoundException;
 import com.digital.pos.domain.exception.ShopNotFoundException;
 import com.digital.pos.domain.model.MenuItem;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.OrderItem;
+import com.digital.pos.domain.model.OrderStatus;
 import com.digital.pos.domain.model.QueueAssignmentResult;
 import com.digital.pos.domain.service.QueueAssignmentEngine;
 import java.util.List;
@@ -163,17 +167,78 @@ class OrderUseCaseImplTest {
   @Test
   void serveOrder_shouldMarkOrderAsServed_whenOrderIsWaiting() {
     // Given
-    Long orderId = 1l;
-    Order mockOrder = mock(Order.class);
+    Long orderId = 123L;
+    UUID shopId = UUID.randomUUID();
 
-    when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));
-    when(mockOrder.isWaiting()).thenReturn(true);
+    // Create a mock WAITING order
+    Order order = Order.createNew(shopId, List.of());
+    ReflectionTestUtils.setField(order, "id", orderId); // simulate saved order
+    order.assignQueue(1); // required before serving
+
+    assertThat(order.isWaiting()).isTrue(); // sanity check
+
+    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+    when(lock.doWithLock(
+        eq(QueueLockKey.of(shopId)),
+        any(),
+        any(),
+        any()
+    )).thenAnswer(invocation -> {
+      Supplier<?> supplier = invocation.getArgument(3);
+      return supplier.get();
+    });
 
     // When
     orderUseCase.serveOrder(orderId);
 
     // Then
-    verify(mockOrder).markAsServed();
-    verify(orderRepository).save(mockOrder);
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.SERVED);
+    verify(orderRepository).findById(orderId);
+    verify(orderRepository).save(order);
+    verify(lock).doWithLock(
+        eq(QueueLockKey.of(shopId)),
+        any(),
+        any(),
+        any()
+    );
+  }
+
+  @Test
+  void serveOrder_shouldThrowException_whenOrderNotFound() {
+    // Given
+    Long orderId = 123L;
+
+    when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+
+    // When / Then
+    assertThatThrownBy(() -> orderUseCase.serveOrder(orderId))
+        .isInstanceOf(OrderNotFoundException.class)
+        .hasMessageContaining("Order not found");
+
+    verify(orderRepository).findById(orderId);
+    verifyNoMoreInteractions(orderRepository, lock);
+  }
+
+  @Test
+  void serveOrder_shouldThrowException_whenOrderIsNotWaiting() {
+    // Given
+    Long orderId = 456L;
+    UUID shopId = UUID.randomUUID();
+
+    Order order = Order.createNew(shopId, List.of());
+    order.assignQueue(1);
+    order.markAsServed(); // simulate status is already SERVED
+    ReflectionTestUtils.setField(order, "id", orderId);
+
+    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+    // When / Then
+    assertThatThrownBy(() -> orderUseCase.serveOrder(orderId))
+        .isInstanceOf(InvalidOrderStateException.class)
+        .hasMessageContaining("is in state SERVED");
+
+    verify(orderRepository).findById(orderId);
+    verifyNoMoreInteractions(orderRepository, lock);
   }
 }
