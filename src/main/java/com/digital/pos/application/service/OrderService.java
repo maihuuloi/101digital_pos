@@ -1,5 +1,7 @@
 package com.digital.pos.application.service;
 
+import static org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT;
+
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
 import com.digital.pos.application.mapper.OrderMapper;
@@ -26,8 +28,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -64,6 +68,7 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
 
   @Override
   @Transactional
+  @CacheEvict(value = "shop-queue-snapshot", key = "#request.shopId")
   public OrderCreatedResponse createOrder(CreateOrderRequest request) {
     UUID shopId = request.getShopId();
     log.debug("Creating order for shop {}", shopId);
@@ -120,7 +125,8 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
   }
 
   @Override
-  public void serveOrder(Long orderId) {
+  @CacheEvict(value = "shop-queue-snapshot", key = "#result")
+  public UUID serveOrder(Long orderId) {
     log.info("Attempting to serve order {}", orderId);
 
     Order order = orderRepository.findById(orderId)
@@ -131,6 +137,8 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
     order.markAsServed();
 
     serveOrderWithLock(orderId, order);
+
+    return order.getShopId();
   }
 
   private void serveOrderWithLock(Long orderId, Order order) {

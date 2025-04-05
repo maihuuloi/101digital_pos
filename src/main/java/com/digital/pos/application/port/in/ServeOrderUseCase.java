@@ -1,6 +1,8 @@
 package com.digital.pos.application.port.in;
 
+import java.util.UUID;
+
 public interface ServeOrderUseCase {
 
-  void serveOrder(Long orderId);
+  UUID serveOrder(Long orderId);
 }

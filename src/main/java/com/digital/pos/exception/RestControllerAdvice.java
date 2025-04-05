@@ -1,6 +1,7 @@
 package com.digital.pos.exception;
 
 import com.digital.pos.domain.exception.AllQueueFullException;
+import com.digital.pos.domain.exception.InvalidOrderStateException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 @Log4j2
 public class RestControllerAdvice {
+
+  @ExceptionHandler(InvalidOrderStateException.class)
+  public ResponseEntity<ErrorResponse> handleInvalidOrderState(InvalidOrderStateException ex) {
+    log.error("Invalid order state: {}", ex.getMessage(), ex);
+    return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_ORDER_STATE", ex.getMessage());
+  }
 
   @ExceptionHandler(AllQueueFullException.class)
   public ResponseEntity<ErrorResponse> handleAllQueueFull(AllQueueFullException ex) {

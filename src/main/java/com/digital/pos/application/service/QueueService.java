@@ -22,9 +22,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @RequiredArgsConstructor
 @Slf4j
 public class QueueService implements GetQueueSnapshotUseCase {
@@ -106,6 +107,7 @@ public class QueueService implements GetQueueSnapshotUseCase {
   }
 
   @Override
+  @Cacheable(value = "shop-queue-snapshot", key = "#shopId")
   public ShopQueueResponse getShopQueueSnapshot(UUID shopId) {
     log.info("Fetching queue snapshot for shop {}", shopId);
     validateShopExists(shopId);
