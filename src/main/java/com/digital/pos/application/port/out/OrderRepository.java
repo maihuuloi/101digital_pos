@@ -14,5 +14,5 @@ public interface OrderRepository  {
 
   Optional<Order> findById(Long orderId);
 
-  Long findLivePositionInQueue(Long orderId);
+  Integer findLivePositionInQueue(Long orderId);
 }

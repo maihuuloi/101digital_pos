@@ -69,7 +69,7 @@ public class OrderUseCaseImpl implements OrderUseCase {
     );
     log.debug("Order {} created and assigned to queue", savedOrder.getId());
 
-    Long livePosition = processOrderApplicationService.getLivePosition(savedOrder);
+    Integer livePosition = processOrderApplicationService.getLivePosition(savedOrder);
     log.info("Order {} live position in queue is {}", savedOrder.getId(), livePosition);
 
     return orderMapper.toOrderCreatedResponse(savedOrder, livePosition);

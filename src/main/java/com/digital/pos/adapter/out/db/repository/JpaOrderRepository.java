@@ -21,5 +21,5 @@ public interface JpaOrderRepository extends JpaRepository<OrderEntity, Long> {
       AND o2.status = 'WAITING'
       AND o2.id < o1.id
 """)
-  Long findLivePositionInQueue(@Param("orderId") Long orderId);
+  Integer findLivePositionInQueue(@Param("orderId") Long orderId);
 }

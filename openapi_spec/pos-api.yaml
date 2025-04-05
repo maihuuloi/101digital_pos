@@ -242,7 +242,7 @@ components:
       required:
         - orderId
         - queueNumber
-        - position
+        - livePosition
         - estimatedWaitMinutes
       description: Response returned after successfully creating an order
 
@@ -280,7 +280,7 @@ components:
         - orderId
         - status
         - queueNumber
-        - position
+        - livePosition
         - estimatedWaitMinutes
       description: Response showing the order's status and position in queue
 

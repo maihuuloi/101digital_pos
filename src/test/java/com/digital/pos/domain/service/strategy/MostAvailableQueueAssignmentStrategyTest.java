@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.digital.pos.domain.exception.AllQueueFullException;
 import com.digital.pos.domain.model.Order;
 import com.digital.pos.domain.model.QueueAssignmentResult;
 import com.digital.pos.domain.model.ShopConfiguration;
@@ -49,26 +50,38 @@ class MostAvailableQueueAssignmentStrategyTest {
     QueueAssignmentResult result = strategy.assign(new QueueAssignmentContext(newOrder, config, pendingOrders));
 
     assertEquals(2, result.queueNumber());
-    assertEquals(4, result.livePosition()); // 3 existing orders → position 4
   }
 
   @Test
   void assign_shouldThrow_whenNoQueueHasAvailableSlot() {
-    Map<Integer, Integer> capacities = Map.of(1, 2, 2, 2);
-    ShopConfiguration config = new ShopConfiguration(UUID.randomUUID(), "MOST_AVAILABLE", capacities);
+    // Given
+    UUID shopId = UUID.randomUUID();
+    Order order = Order.createNew(shopId, List.of());
 
+    Map<Integer, Integer> queueCapacities = Map.of(
+        1, 2,
+        2, 2
+    );
+    ShopConfiguration config = new ShopConfiguration(shopId, "most-available", queueCapacities);
+
+    // Simulate all queues full
     List<Order> pendingOrders = List.of(
-        createOrder(1), createOrder(1),
-        createOrder(2), createOrder(2)
+        orderWith(shopId, 1),
+        orderWith(shopId, 1),
+        orderWith(shopId, 2),
+        orderWith(shopId, 2)
     );
 
-    Order newOrder = createOrder(1);
+    QueueAssignmentContext context = new QueueAssignmentContext(order, config, pendingOrders);
 
-    IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-        strategy.assign(new QueueAssignmentContext(newOrder, config, pendingOrders))
-    );
+    // When / Then
+    assertThrows(AllQueueFullException.class, () -> strategy.assign(context));
+  }
 
-    assertEquals("No available queues found for order assignment", ex.getMessage());
+  private Order orderWith(UUID shopId, int queueNumber) {
+    Order o = Order.createNew(shopId, List.of());
+    o.assignQueue(queueNumber);
+    return o;
   }
 
 

@@ -12,5 +12,5 @@ import org.springframework.stereotype.Component;
 public interface OrderMapper {
    @Mapping(target = "orderId", source = "order.id")
    @Mapping(target = "livePosition", source = "livePosition")
-   OrderCreatedResponse toOrderCreatedResponse(Order order, Long livePosition);
+   OrderCreatedResponse toOrderCreatedResponse(Order order, Integer livePosition);
 }

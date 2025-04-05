@@ -19,9 +19,10 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
     return NAME.equalsIgnoreCase(config.queueStrategy());
   }
 
-  public QueueAssignmentResult assign(QueueAssignmentContext queueAssignmentContext) {
-    Map<Integer, Integer> capacities = queueAssignmentContext.config().queueCapacities();
-    Map<Integer, Long> currentCounts = queueAssignmentContext.pendingOrders().stream()
+  @Override
+  public QueueAssignmentResult assign(QueueAssignmentContext ctx) {
+    Map<Integer, Integer> capacities = ctx.config().queueCapacities();
+    Map<Integer, Long> currentCounts = ctx.pendingOrders().stream()
         .collect(Collectors.groupingBy(Order::getQueueNumber, Collectors.counting()));
 
     int selectedQueue = -1;
@@ -40,10 +41,8 @@ public class MostAvailableQueueAssignmentStrategy implements QueueAssignmentStra
     }
 
     if (selectedQueue == -1 || maxAvailableSlots <= 0) {
-      throw new AllQueueFullException(queueAssignmentContext.order().getShopId());
+      throw new AllQueueFullException(ctx.order().getShopId());
     }
-
-    int position = currentCounts.getOrDefault(selectedQueue, 0L).intValue() + 1;
 
     return new QueueAssignmentResult(selectedQueue);
   }

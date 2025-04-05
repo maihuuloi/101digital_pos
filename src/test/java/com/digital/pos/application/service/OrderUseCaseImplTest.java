@@ -1,5 +1,6 @@
 package com.digital.pos.application.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -13,6 +14,7 @@ import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
 import com.digital.pos.adapter.in.rest.model.OrderItemRequest;
 import com.digital.pos.application.mapper.OrderMapper;
+import com.digital.pos.application.port.out.LockService;
 import com.digital.pos.application.port.out.MenuService;
 import com.digital.pos.application.port.out.OrderRepository;
 import com.digital.pos.application.port.out.ShopService;
@@ -27,11 +29,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class OrderUseCaseImplTest {
@@ -41,7 +45,7 @@ class OrderUseCaseImplTest {
   @Mock
   private MenuService menuService;
   @Mock
-  private QueueAssignmentEngine queueAssignmentEngine;
+  private LockService lock;
   @Mock
   private OrderRepository orderRepository;
   @Mock
@@ -54,47 +58,44 @@ class OrderUseCaseImplTest {
 
   @Test
   void createOrder_shouldSucceed_whenShopAndItemsAreValid() {
-    // Given
+    // Arrange
     UUID shopId = UUID.randomUUID();
     UUID menuItemId = UUID.randomUUID();
+    int livePosition = 3;
 
-    OrderItemRequest itemRequest = new OrderItemRequest(menuItemId, 2);
-    CreateOrderRequest request = new CreateOrderRequest(shopId, List.of(itemRequest));
+    CreateOrderRequest request = new CreateOrderRequest(shopId,List.of(new OrderItemRequest(menuItemId, 2)));
 
-    MenuItem menuItem = new MenuItem(menuItemId, "Latte", 30.0, true);
-    Set<MenuItem> availableItems = Set.of(menuItem);
+    MenuItem menuItem = new MenuItem(menuItemId, "Latte", 50.0, true);
+    Order order = Order.createNew(shopId, List.of(new OrderItem(menuItemId, 2, 50.0)));
+    Order savedOrder = Order.createNew(shopId, order.getItems());
+    savedOrder.assignQueue(1); // queueNumber
+    ReflectionTestUtils.setField(savedOrder, "id", order.getId());
 
-    OrderItem orderItem = new OrderItem(menuItemId, 2, 30.0);
-    Order orderBeforeAssignment = Order.createNew(shopId, List.of(orderItem));
-    QueueAssignmentResult assignment = new QueueAssignmentResult(1);
+    OrderCreatedResponse expectedResponse = new OrderCreatedResponse(order.getId(), 1,livePosition,22);
 
-    Order orderAfterAssignment = Order.createNew(shopId, List.of(orderItem));
-    orderAfterAssignment.assignQueue(1);
-
-    Order savedOrder = Order.createNew(shopId, List.of(orderItem));
-    savedOrder.assignQueue(1);
-
-    OrderCreatedResponse expectedResponse = new OrderCreatedResponse(savedOrder.getId(), 1, 3, 6);
-
-    // When
+    // Mocks
     when(shopService.existsById(shopId)).thenReturn(true);
-    when(menuService.getAvailableItemIds(shopId)).thenReturn(availableItems);
-    when(processOrderApplicationService.assignOrderToQueue(any(Order.class))).thenReturn(assignment);
-    when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
-    when(orderMapper.toOrderCreatedResponse(savedOrder)).thenReturn(expectedResponse);
+    when(menuService.getAvailableItemIds(shopId)).thenReturn(Set.of(menuItem));
+    when(lock.doWithLock(any(), any(), any(), any()))
+        .thenAnswer(invocation -> ((Supplier<Order>) invocation.getArgument(3)).get());
 
-    // Then
+    when(processOrderApplicationService.assignOrderToQueue(any())).thenReturn(new QueueAssignmentResult( 1));
+    when(orderRepository.save(any())).thenReturn(savedOrder);
+    when(processOrderApplicationService.getLivePosition(savedOrder)).thenReturn(livePosition);
+    when(orderMapper.toOrderCreatedResponse(savedOrder, livePosition)).thenReturn(expectedResponse);
+
+    // Act
     OrderCreatedResponse result = orderUseCase.createOrder(request);
 
-    assertNotNull(result);
-    assertEquals(expectedResponse, result);
-
-    // Verify interactions
+    // Assert
+    assertThat(result).isEqualTo(expectedResponse);
     verify(shopService).existsById(shopId);
     verify(menuService).getAvailableItemIds(shopId);
-    verify(processOrderApplicationService).assignOrderToQueue(any(Order.class));
-    verify(orderRepository).save(any(Order.class));
-    verify(orderMapper).toOrderCreatedResponse(savedOrder);
+    verify(lock).doWithLock(eq(QueueLockKey.of(shopId)), any(), any(), any());
+    verify(orderRepository).save(any());
+    verify(processOrderApplicationService).assignOrderToQueue(any());
+    verify(processOrderApplicationService).getLivePosition(savedOrder);
+    verify(orderMapper).toOrderCreatedResponse(savedOrder, livePosition);
   }
 
   @Test
@@ -162,7 +163,7 @@ class OrderUseCaseImplTest {
   @Test
   void serveOrder_shouldMarkOrderAsServed_whenOrderIsWaiting() {
     // Given
-    Long orderId = UUID.randomUUID();
+    Long orderId = 1l;
     Order mockOrder = mock(Order.class);
 
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(mockOrder));

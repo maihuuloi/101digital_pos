@@ -38,7 +38,7 @@ public class ProcessOrderApplicationService {
     return assign;
   }
 
-  public Long getLivePosition(Order savedOrder) {
+  public Integer getLivePosition(Order savedOrder) {
 
     return orderRepository.findLivePositionInQueue(savedOrder.getId()) + 1;
   }
