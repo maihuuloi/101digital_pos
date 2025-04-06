@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Shops")
 @RestController
-@RequestMapping("/api/shops")
 @RequiredArgsConstructor
 @Validated
 @Slf4j

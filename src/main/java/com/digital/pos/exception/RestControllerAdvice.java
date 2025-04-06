@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -30,6 +31,12 @@ public class RestControllerAdvice {
   public ResponseEntity<?> handleNotFound(EntityNotFoundException ex) {
     log.error("User not found: {}", ex.getMessage(), ex);
     return buildResponse(HttpStatus.NOT_FOUND, "DATA_NOT_FOUND", ex.getMessage());
+  }
+
+  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+  public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+    log.error("Method not supported: {}", ex.getMessage(), ex);
+    return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage());
   }
 
   @ExceptionHandler(Exception.class)

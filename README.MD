@@ -16,24 +16,46 @@ It is implemented using **Spring Boot**, follows **Hexagonal Architecture**, and
 **, and external services like **Menu** and **Shop**.
 
 ---
+## 2. 🧪 Demo
 
-## 2. ▶️ Running the Application with `./run.sh`
+This section helps you quickly **build, run, and test** the Process Order Service using the provided scripts.
 
-To simplify setup and execution, the project includes a `run.sh` script that builds the project and starts all required
-services using Docker Compose.
+---
 
-### 🔧 What It Does
+### ▶️ Step 1: Run the Application with `./run.sh`
 
-- Builds the Spring Boot application using Maven
-- Brings up PostgreSQL, Redis, and the Process Order Service via Docker Compose
-- Applies Liquibase migrations on first startup
-- Exposes the service on `http://localhost:8082`
+The `run.sh` script simplifies setup by building the app and spinning up all required services using Docker Compose.
 
-### 🚀 To Run the App
+#### 🔧 What It Does
+
+- Builds the Spring Boot app with Maven
+- Starts PostgreSQL, Redis, and the Process Order Service
+- Applies Liquibase migrations
+- Exposes the service at: `http://localhost:8082`
+
+#### 🚀 Run the Script
 
 ```bash
 chmod +x ./run.sh
 ./run.sh
+```
+### ▶️ Step 2: Demonstrate the API with `./test-api.sh`
+
+Once the app is running, use `test-api.sh` to simulate end-to-end order flow.
+
+#### 🧪 What It Tests
+
+- Place an order
+- Check order status
+- View queue snapshot
+- Serve the order
+- Attempt to cancel the order
+
+#### 🏃 Run the Script
+
+```bash
+chmod +x ./test-api.sh
+./test-api.sh
 ```
 
 ---
