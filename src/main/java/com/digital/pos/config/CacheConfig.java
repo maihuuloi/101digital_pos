@@ -23,11 +23,13 @@ public class CacheConfig {
     Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
 
     cacheConfigs.put("shop-exists", RedisCacheConfiguration.defaultCacheConfig()
-        .entryTtl(Duration.ofMinutes(10)));
+        .entryTtl(Duration.ofMinutes(5)));
 
     cacheConfigs.put("shop-config", RedisCacheConfiguration.defaultCacheConfig()
-        .entryTtl(Duration.ofMinutes(30)));
+        .entryTtl(Duration.ofMinutes(10)));
 
+    cacheConfigs.put("shop-queue-snapshot", RedisCacheConfiguration.defaultCacheConfig()
+        .entryTtl(Duration.ofMinutes(3)));
     RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
         .entryTtl(Duration.ofMinutes(5));
 

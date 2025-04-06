@@ -34,6 +34,21 @@ public class QueueService implements GetQueueSnapshotUseCase {
   private final OrderRepository orderRepository;
   private final QueueAssignmentEngine queueAssignmentEngine;
 
+  @Override
+  @Cacheable(value = "shop-queue-snapshot", key = "#shopId")
+  public ShopQueueResponse getShopQueueSnapshot(UUID shopId) {
+    log.info("Fetching queue snapshot for shop {}", shopId);
+    validateShopExists(shopId);
+
+    ShopConfiguration shopConfig = shopService.getShopConfig(shopId);
+    Map<Integer, Integer> capacities = shopConfig.queueCapacities();
+
+    List<Order> orders = orderRepository.findByShopIdAndStatus(shopId, OrderStatus.WAITING);
+
+    List<QueueInfo> queueInfos = groupOrdersByQueue(orders, capacities);
+    return new ShopQueueResponse(shopId, queueInfos);
+  }
+
   private static List<QueueInfo> groupOrdersByQueue(List<Order> orders, Map<Integer, Integer> capacities) {
     Map<Integer, List<Order>> queueMap = orders.stream()
         .collect(Collectors.groupingBy(Order::getQueueNumber));
@@ -106,20 +121,6 @@ public class QueueService implements GetQueueSnapshotUseCase {
     return orderRepository.findPositionInQueueOrderById(order.getId());
   }
 
-  @Override
-  @Cacheable(value = "shop-queue-snapshot", key = "#shopId")
-  public ShopQueueResponse getShopQueueSnapshot(UUID shopId) {
-    log.info("Fetching queue snapshot for shop {}", shopId);
-    validateShopExists(shopId);
-
-    ShopConfiguration shopConfig = shopService.getShopConfig(shopId);
-    Map<Integer, Integer> capacities = shopConfig.queueCapacities();
-
-    List<Order> orders = orderRepository.findByShopIdAndStatus(shopId, OrderStatus.WAITING);
-
-    List<QueueInfo> queueInfos = groupOrdersByQueue(orders, capacities);
-    return new ShopQueueResponse(shopId, queueInfos);
-  }
 
   private void validateShopExists(UUID shopId) {
     if (!shopService.existsById(shopId)) {

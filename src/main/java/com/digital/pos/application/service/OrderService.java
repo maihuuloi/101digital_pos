@@ -114,17 +114,8 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
     }
   }
 
-  private Order processOrder(Order order) {
-    QueueAssignmentResult assignment = queueService.assignOrderToQueue(order);
-    order.assignQueue(assignment.queueNumber());
-
-    Order savedOrder = orderRepository.save(order);
-    log.debug("Saved order with ID {}", order.getId());
-
-    return savedOrder;
-  }
-
   @Override
+  @Transactional
   @CacheEvict(value = "shop-queue-snapshot", key = "#result")
   public UUID serveOrder(Long orderId) {
     log.info("Attempting to serve order {}", orderId);
@@ -139,6 +130,16 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
     serveOrderWithLock(orderId, order);
 
     return order.getShopId();
+  }
+
+  private Order processOrder(Order order) {
+    QueueAssignmentResult assignment = queueService.assignOrderToQueue(order);
+    order.assignQueue(assignment.queueNumber());
+
+    Order savedOrder = orderRepository.save(order);
+    log.debug("Saved order with ID {}", order.getId());
+
+    return savedOrder;
   }
 
   private void serveOrderWithLock(Long orderId, Order order) {
