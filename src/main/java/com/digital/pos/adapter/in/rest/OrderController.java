@@ -1,6 +1,5 @@
 package com.digital.pos.adapter.in.rest;
 
-import com.digital.pos.adapter.in.rest.api.ApiUtil;
 import com.digital.pos.adapter.in.rest.api.OrdersApi;
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
@@ -12,8 +11,6 @@ import com.digital.pos.application.port.in.ServeOrderUseCase;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;

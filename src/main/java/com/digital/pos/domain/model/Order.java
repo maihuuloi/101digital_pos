@@ -56,4 +56,10 @@ public class Order {
       throw new IllegalStateException("Order is not in a state to be canceled");
     }
   }
+
+  public Double getTotalPrice() {
+    return items.stream()
+        .mapToDouble(OrderItem::getTotalPrice)
+        .sum();
+  }
 }

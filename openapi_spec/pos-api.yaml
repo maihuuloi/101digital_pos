@@ -78,8 +78,8 @@ paths:
           description: Not found (order does not exist)
         "500":
           description: Internal server error
-
-    delete:
+  /api/orders/{orderId}/cancel:
+    patch:
       tags:
         - Orders
       summary: Cancel an order

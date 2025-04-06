@@ -206,26 +206,11 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase, Canc
     if (order.getStatus() == OrderStatus.WAITING) {
       livePosition = orderRepository.findPositionInQueueOrderById(order.getId());
     }
-    // 6. Estimate wait time (simplified logic)
 
-    // 4. Map order items to DTO
-    List<OrderItemSummary> itemSummaries = order.getItems().stream()
-        .map(item -> new OrderItemSummary(
-            item.menuItemId(),
-            item.quantity(),
-            item.price(),
-            item.getTotalPrice()
-        ))
-        .toList();
-
-    // 5. Calculate total price
-    double totalPrice = itemSummaries.stream()
-        .mapToDouble(OrderItemSummary::getTotalPrice)
-        .sum();
     List<OrderItemSummary> orderItemSummaries = orderItemMapper.map(order.getItems());
 
     // 7. Return response
-    OrderStatusResponse orderStatusResponse = orderMapper.toOrderStatusResponse(order, livePosition, null, totalPrice);
+    OrderStatusResponse orderStatusResponse = orderMapper.toOrderStatusResponse(order, livePosition, null);
     orderStatusResponse.setItems(orderItemSummaries);
     return orderStatusResponse;
   }

@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -323,7 +322,7 @@ class OrderServiceTest {
     order.assignQueue(2); // sets WAITING + queueNumber
 
     int livePosition = 3;
-    double totalPrice = 25.0;
+    double totalPrice = order.getTotalPrice();
 
     OrderStatusResponse expectedResponse = new OrderStatusResponse(
         order.getId(),
@@ -338,7 +337,7 @@ class OrderServiceTest {
 
     given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
     given(orderRepository.findPositionInQueueOrderById(order.getId())).willReturn(livePosition);
-    given(orderMapper.toOrderStatusResponse(eq(order), eq(livePosition), any(), eq(totalPrice)))
+    given(orderMapper.toOrderStatusResponse(eq(order), eq(livePosition), any()))
         .willReturn(expectedResponse);
 
     // Act
@@ -348,6 +347,6 @@ class OrderServiceTest {
     assertEquals(expectedResponse, actualResponse);
     verify(orderRepository).findById(orderId);
     verify(orderRepository).findPositionInQueueOrderById(order.getId());
-    verify(orderMapper).toOrderStatusResponse(eq(order), eq(livePosition), any(), eq(totalPrice));
+    verify(orderMapper).toOrderStatusResponse(eq(order), eq(livePosition), any());
   }
 }
