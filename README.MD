@@ -216,6 +216,13 @@ Indexes:
 
 - Support for VIP and priority queues
 - Custom queue assignment strategies per shop (e.g., based on item type)
+- Support for multiple currencies and regional pricing:
+    - Menu items priced per currency (e.g., VND, USD)
+    - Customer preference or location determines pricing display
+- Payment integration (optional or pre-order payment):
+    - Support for digital wallets (e.g., Momo, ZaloPay, Apple Pay)
+    - Integration with third-party payment gateways (e.g., Stripe, VNPay)
+    - Order status updates automatically on payment success/failure
 
 ### 🔁 Idempotency
 

@@ -21,13 +21,18 @@ The Customer App enables end users to browse a coffee shop’s menu, place an or
 
 
 ### 2.3 Key Use Cases
+## 2.3 📌 Key Use Cases
 
-| UC-ID | Title        | Main Success Scenario                                           |
-|-------|--------------|-----------------------------------------------------------------|
-| UC-01 | Browse Menu  | Customer requests menu; items returned.                         |
-| UC-02 | Place Order  | Customer selects items → submits → receives queue number & ETA. |
-| UC-03 | Track Order  | Customer checks real-time queue position                        |
-| UC-04 | Cancel Order | Customer cancels a PENDING order                                |
+| UC‑ID | Title              | Main Success Scenario                                                                 |
+|-------|--------------------|----------------------------------------------------------------------------------------|
+| UC‑01 | Register / Sign In | Customer registers or signs in using name, phone, and default address.                |
+| UC‑02 | Discover Shops     | Customer views nearby coffee shops with location, hours, contact, and menu.           |
+| UC‑03 | Browse Menu        | Customer fetches menu items for a selected shop.                                      |
+| UC‑04 | Place Order        | Customer selects drinks → submits order → receives queue number and estimated wait.   |
+| UC‑05 | Track Queue        | Customer polls or receives live updates on their position in the shop’s queue.        |
+| UC‑06 | Cancel Order       | Customer cancels a pending order and receives confirmation.                           |
+| UC‑07 | Manage Profile     | Customer views and edits name, phone number, or default address.                      |
+| UC‑08 | Track History      | Customer views past order history and statuses.                                       |
 
 ## 3. 🏗 Conceptual Architecture
 ![img_1.png](conceptual_architect.png)
@@ -90,12 +95,46 @@ The Customer App enables end users to browse a coffee shop’s menu, place an or
 ```
 
 ## 6. 🔁 Data Flow
+This section outlines the key data interactions across system components when a customer uses the application.
 
-1. Customer logs in → gets JWT
-2. App retrieves menu
-3. App sends order → Order Service validates → assigns queue
-4. Customer polls or receives push notification
-5. Cancel request updates status
+### 🔐 1. Authentication Flow
+- Customer signs in or registers via the Auth Service.
+- Auth Service issues a JWT access token.
+- JWT is included in all subsequent requests via the `Authorization: Bearer <token>` header.
+
+### 🛍️ 2. Shop & Menu Discovery
+- Customer app sends a request to the Shop Service to list nearby shops (based on geo location).
+- For a selected shop, the app fetches menu items from the Menu Service (may be cached on client).
+
+### ☕ 3. Place Order
+- Customer submits an order with selected menu items and shop ID.
+- The backend:
+    - Validates the shop and item availability.
+    - Assigns the order to an appropriate queue based on shop rules.
+    - Persists the order to the database.
+    - Emits an event (e.g., `OrderCreated`) for asynchronous consumers such as notification or analytics services.
+
+### ⏱️ 4. Track Queue Position
+- Customer periodically polls their order status or receives push updates.
+- The backend returns current queue number, dynamic live position (based on current state), and estimated wait time.
+
+### ❌ 5. Cancel Order
+- Customer sends a cancel request for an existing order.
+- If the order is still in a cancellable state (e.g., not yet served), it is marked as canceled.
+- This update is stored in the database, and events or notifications may be triggered.
+
+### ✅ 6. Serve Order (Operator Action)
+- A shop operator marks an order as served.
+- The backend verifies the order’s current status and updates it accordingly.
+- Events may be emitted for further processing such as notifying the customer or updating metrics.
+
+### 📲 7. Push Notifications (Optional)
+- When important events occur (order created, served, canceled), the system emits events.
+- These can be consumed by a notification service to send FCM/APN notifications to customers.
+
+### 🧾 8. Order History & Profile
+- Customer can view their order history and update profile details.
+- This data is fetched from the user and order storage layers.
 
 ## 7. 🎯 Standards
 ### 7.1 General Standards
@@ -129,12 +168,12 @@ The Customer App enables end users to browse a coffee shop’s menu, place an or
 
 #### 🗄️ Domain & Persistence
 
-| Artifact Type       | Naming Convention         | Notes                                        |
-|----------------------|---------------------------|----------------------------------------------|
-| **Entity**           | `*Entity`                 | JPA-persisted class                          |
-| **Repository**       | `*Repository`             | Interfaces extending `JpaRepository`         |
-| **Value Object**     | Plain name                | Immutable domain value (e.g., `OrderItem`)   |
-| **Enum**             | UpperCamelCase            | e.g., `OrderStatus`, `UserRole`              |
+| Artifact Type       | Naming Convention         | Notes                                  |
+|----------------------|---------------------------|----------------------------------------|
+| **Entity**           | `*Entity`                 | JPA-persisted class                    |
+| **Repository**       | `*Repository`             | Interfaces extending `JpaRepository`   |
+| **Value Object**     | Plain name                | Immutable domain value (e.g., `Price`) |
+| **Enum**             | UpperCamelCase            | e.g., `OrderStatus`, `UserRole`        |
 
 
 ## 8. 🔐 Security
