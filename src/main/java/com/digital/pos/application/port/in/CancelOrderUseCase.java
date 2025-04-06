@@ -1,6 +1,8 @@
 package com.digital.pos.application.port.in;
 
+import java.util.UUID;
+
 public interface CancelOrderUseCase {
 
-  public void cancelOrder(Long orderId);
+  public UUID cancelOrder(Long orderId);
 }

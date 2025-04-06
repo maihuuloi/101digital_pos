@@ -161,7 +161,8 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase, Canc
   }
 
   @Override
-  public void cancelOrder(Long orderId) {
+  @CacheEvict(value = "shop-queue-snapshot", key = "#result")
+  public UUID cancelOrder(Long orderId) {
     log.info("Attempting to cancel order {}", orderId);
 
     Order order = orderRepository.findById(orderId)
@@ -186,6 +187,8 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase, Canc
           return null;
         }
     );
+
+    return order.getShopId();
   }
 
   @Override

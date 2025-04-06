@@ -91,7 +91,6 @@ Adapters)**. It focuses on separation of concerns, testability, and future scala
 | API Docs UI       | Springdoc + Swagger UI                       |
 | DB Versioning     | Liquibase                                    |
 | Client Comm.      | Feign Client (Shop, Menu)                    |
-| Observability     | SLF4J, Micrometer, Prometheus, OpenTelemetry |
 | Testing           | JUnit 5, Mockito, Testcontainers, WireMock   |
 
 ---
@@ -153,8 +152,8 @@ sequentially by the database.
       }
       ```
 
-- `GET /api/orders/{orderId}` – Get order details (**Not implemented yet**)
-- `PATCH /api/orders/{orderId}` – Cancel an order (**Not implemented yet**)
+- `GET /api/orders/{orderId}` – Get order details
+- `PATCH /api/orders/{orderId}` – Cancel an order
 - `PATCH /api/orders/{orderId}/serve` – Mark an order as served
     - example request:
       ```http request
