@@ -4,8 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -14,6 +19,9 @@ import static org.mockito.Mockito.when;
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
 import com.digital.pos.adapter.in.rest.model.OrderItemRequest;
+import com.digital.pos.adapter.in.rest.model.OrderStatusResponse;
+import com.digital.pos.adapter.in.rest.model.OrderStatusResponse.StatusEnum;
+import com.digital.pos.application.mapper.OrderItemMapper;
 import com.digital.pos.application.mapper.OrderMapper;
 import com.digital.pos.application.port.out.LockService;
 import com.digital.pos.application.port.out.MenuService;
@@ -41,7 +49,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
-class OrderUseCaseImplTest {
+class OrderServiceTest {
 
   @Mock
   private ShopService shopService;
@@ -55,9 +63,11 @@ class OrderUseCaseImplTest {
   private OrderMapper orderMapper;
   @Mock
   private QueueService queueService;
+  @Mock
+  private OrderItemMapper orderItemMapper;
 
   @InjectMocks
-  private OrderService orderUseCase;
+  private OrderService orderService;
 
   @Test
   void createOrder_shouldSucceed_whenShopAndItemsAreValid() {
@@ -69,7 +79,7 @@ class OrderUseCaseImplTest {
     CreateOrderRequest request = new CreateOrderRequest(shopId, List.of(new OrderItemRequest(menuItemId, 2)));
 
     MenuItem menuItem = new MenuItem(menuItemId, "Latte", 50.0, true);
-    Order order = Order.createNew(shopId, List.of(new OrderItem(menuItemId, 2, 50.0)));
+    Order order = Order.createNew(shopId, List.of(new OrderItem(1l, menuItemId, 2, 50.0)));
     Order savedOrder = Order.createNew(shopId, order.getItems());
     savedOrder.assignQueue(1); // queueNumber
     ReflectionTestUtils.setField(savedOrder, "id", order.getId());
@@ -88,7 +98,7 @@ class OrderUseCaseImplTest {
     when(orderMapper.toOrderCreatedResponse(savedOrder, livePosition)).thenReturn(expectedResponse);
 
     // Act
-    OrderCreatedResponse result = orderUseCase.createOrder(request);
+    OrderCreatedResponse result = orderService.createOrder(request);
 
     // Assert
     assertThat(result).isEqualTo(expectedResponse);
@@ -114,7 +124,7 @@ class OrderUseCaseImplTest {
 
     // When + Then
     ShopNotFoundException exception = assertThrows(ShopNotFoundException.class, () -> {
-      orderUseCase.createOrder(request);
+      orderService.createOrder(request);
     });
 
     assertEquals(shopId, exception.getShopId());
@@ -149,7 +159,7 @@ class OrderUseCaseImplTest {
 
     // When & Then
     MenuItemNotFoundException exception = assertThrows(MenuItemNotFoundException.class, () -> {
-      orderUseCase.createOrder(request);
+      orderService.createOrder(request);
     });
 
     assertEquals(invalidMenuItemId, exception.getMenuItemId());
@@ -189,7 +199,7 @@ class OrderUseCaseImplTest {
     });
 
     // When
-    orderUseCase.serveOrder(orderId);
+    orderService.serveOrder(orderId);
 
     // Then
     assertThat(order.getStatus()).isEqualTo(OrderStatus.SERVED);
@@ -211,7 +221,7 @@ class OrderUseCaseImplTest {
     when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
 
     // When / Then
-    assertThatThrownBy(() -> orderUseCase.serveOrder(orderId))
+    assertThatThrownBy(() -> orderService.serveOrder(orderId))
         .isInstanceOf(OrderNotFoundException.class)
         .hasMessageContaining("Order not found");
 
@@ -233,11 +243,111 @@ class OrderUseCaseImplTest {
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
     // When / Then
-    assertThatThrownBy(() -> orderUseCase.serveOrder(orderId))
+    assertThatThrownBy(() -> orderService.serveOrder(orderId))
         .isInstanceOf(InvalidOrderStateException.class)
         .hasMessageContaining("is in state SERVED");
 
     verify(orderRepository).findById(orderId);
     verifyNoMoreInteractions(orderRepository, lock);
+  }
+
+  @Test
+  void cancelOrder_shouldMarkOrderAsCanceled_whenOrderIsWaiting() {
+    // Arrange
+    Long orderId = 1L;
+    UUID shopId = UUID.randomUUID();
+    List<OrderItem> items = List.of(
+        new OrderItem(1l, UUID.randomUUID(), 1, 20.0)
+    );
+    Order order = Order.createNew(shopId, items);
+    order.assignQueue(1);
+
+    given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+    given(lock.doWithLock(anyString(), any(), any(), any()))
+        .willAnswer(invocation -> {
+          Supplier<?> supplier = invocation.getArgument(3);
+          return supplier.get();
+        });
+
+    // Act
+    orderService.cancelOrder(orderId);
+
+    // Assert
+    assertEquals(OrderStatus.CANCELED, order.getStatus());
+    verify(lock).doWithLock(eq(QueueLockKey.of(shopId)), any(), any(), any());
+    verify(orderRepository).save(order);
+  }
+
+  @Test
+  void cancelOrder_shouldThrowException_whenOrderIsNotWaiting() {
+    // Arrange
+    Long orderId = 2L;
+    Order order = Order.createNew(UUID.randomUUID(), List.of());
+    order.markAsServed();
+    given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+
+    // Act + Assert
+    InvalidOrderStateException ex = assertThrows(
+        InvalidOrderStateException.class,
+        () -> orderService.cancelOrder(orderId)
+    );
+
+    assertTrue(ex.getMessage().contains("is in state"));
+    verify(orderRepository, never()).save(any());
+  }
+
+  @Test
+  void cancelOrder_shouldThrowException_whenOrderDoesNotExist() {
+    // Arrange
+    Long orderId = 99L;
+    given(orderRepository.findById(orderId)).willReturn(Optional.empty());
+
+    // Act + Assert
+    assertThrows(OrderNotFoundException.class, () -> orderService.cancelOrder(orderId));
+    verify(orderRepository, never()).save(any());
+    verify(lock, never()).doWithLock(any(), any(), any(), any());
+  }
+
+  @Test
+  void getOrder_shouldReturnStatusResponse_whenOrderExists() {
+    // Arrange
+    Long orderId = 1L;
+    UUID shopId = UUID.randomUUID();
+    OrderStatus orderStatus = OrderStatus.WAITING;
+
+    List<OrderItem> orderItems = List.of(
+        new OrderItem(1l, UUID.randomUUID(), 2, 10.0),
+        new OrderItem(2l, UUID.randomUUID(), 1, 5.0)
+    );
+    Order order = Order.createNew(shopId, orderItems);
+    order.assignQueue(2); // sets WAITING + queueNumber
+
+    int livePosition = 3;
+    double totalPrice = 25.0;
+
+    OrderStatusResponse expectedResponse = new OrderStatusResponse(
+        order.getId(),
+        shopId,
+        StatusEnum.fromValue(orderStatus.name()),
+        2,
+        livePosition,
+        7, // estimated wait minutes (null or mocked)
+        totalPrice,
+        List.of() // we’re not testing mapping here
+    );
+
+    given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+    given(orderRepository.findPositionInQueueOrderById(order.getId())).willReturn(livePosition);
+    given(orderMapper.toOrderStatusResponse(eq(order), eq(livePosition), any(), eq(totalPrice)))
+        .willReturn(expectedResponse);
+
+    // Act
+    OrderStatusResponse actualResponse = orderService.getOrder(orderId);
+
+    // Assert
+    assertEquals(expectedResponse, actualResponse);
+    verify(orderRepository).findById(orderId);
+    verify(orderRepository).findPositionInQueueOrderById(order.getId());
+    verify(orderMapper).toOrderStatusResponse(eq(order), eq(livePosition), any(), eq(totalPrice));
   }
 }

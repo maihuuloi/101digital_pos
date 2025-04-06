@@ -252,6 +252,10 @@ components:
         orderId:
           type: integer
           format: int64
+        shopId:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
         status:
           type: string
           enum:
@@ -259,31 +263,64 @@ components:
             - CANCELED
             - SERVED
           example: "WAITING"
-          description: Current order status
         queueNumber:
           type: integer
           minimum: 1
           maximum: 3
           description: Which queue the order was assigned to
           example: 1
-        position:
+        livePosition:
           type: integer
-          minimum: 0
-          description: Current position in the queue
+          minimum: 1
+          description: Real-time position in queue
           example: 3
         estimatedWaitMinutes:
           type: integer
           minimum: 0
           description: Estimated wait time in minutes
-          example: 5
+          example: 6
+        totalPrice:
+          type: number
+          format: double
+          description: Total price of the order
+          example: 45.50
+        items:
+          type: array
+          description: List of items in the order
+          items:
+            $ref: '#/components/schemas/OrderItemSummary'
       required:
         - orderId
+        - shopId
         - status
         - queueNumber
         - livePosition
         - estimatedWaitMinutes
-      description: Response showing the order's status and position in queue
-
+        - totalPrice
+        - items
+    OrderItemSummary:
+      type: object
+      properties:
+        menuItemId:
+          type: string
+          format: uuid
+          example: "456e4567-e89b-12d3-a456-426614174999"
+        quantity:
+          type: integer
+          example: 2
+        price:
+          type: number
+          format: double
+          example: 22.5
+        totalPrice:
+          type: number
+          format: double
+          example: 45.0
+      required:
+        - menuItemId
+        - quantity
+        - price
+        - totalPrice
     ShopQueueResponse:
       type: object
       properties:

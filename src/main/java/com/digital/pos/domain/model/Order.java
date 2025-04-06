@@ -47,4 +47,13 @@ public class Order {
       throw new IllegalStateException("Order is not in a state to be served");
     }
   }
+
+  public void markAsCanceled() {
+
+    if (this.status == OrderStatus.WAITING) {
+      this.status = OrderStatus.CANCELED;
+    } else {
+      throw new IllegalStateException("Order is not in a state to be canceled");
+    }
+  }
 }

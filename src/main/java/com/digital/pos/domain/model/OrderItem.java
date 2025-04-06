@@ -3,7 +3,7 @@ package com.digital.pos.domain.model;
 import java.util.UUID;
 
 public record OrderItem(
-    UUID menuItemId,
+    Long id, UUID menuItemId,
     int quantity,
     double price
 ) {

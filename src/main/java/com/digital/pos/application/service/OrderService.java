@@ -1,11 +1,14 @@
 package com.digital.pos.application.service;
 
-import static org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT;
-
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
+import com.digital.pos.adapter.in.rest.model.OrderItemSummary;
+import com.digital.pos.adapter.in.rest.model.OrderStatusResponse;
+import com.digital.pos.application.mapper.OrderItemMapper;
 import com.digital.pos.application.mapper.OrderMapper;
+import com.digital.pos.application.port.in.CancelOrderUseCase;
 import com.digital.pos.application.port.in.CreateOrderUseCase;
+import com.digital.pos.application.port.in.GetOrderUseCase;
 import com.digital.pos.application.port.in.ServeOrderUseCase;
 import com.digital.pos.application.port.out.LockService;
 import com.digital.pos.application.port.out.MenuService;
@@ -31,19 +34,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
 @Transactional
-public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
+public class OrderService implements CreateOrderUseCase, ServeOrderUseCase, CancelOrderUseCase, GetOrderUseCase {
 
   private final OrderRepository orderRepository;
   private final QueueService queueService;
   private final ShopService shopService; // External service
   private final MenuService menuService; // External service
   private final OrderMapper orderMapper;
+  private final OrderItemMapper orderItemMapper;
   private final LockService lock;
 
   private static List<OrderItem> getValidOrderItems(CreateOrderRequest request, Map<UUID, MenuItem> menuItemMap) {
@@ -54,7 +57,7 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
             throw new MenuItemNotFoundException(menuItemId);
           }
           MenuItem menuItem = menuItemMap.get(menuItemId);
-          return new OrderItem(menuItemId, itemRequest.getQuantity(), menuItem.price());
+          return new OrderItem(null, menuItemId, itemRequest.getQuantity(), menuItem.price());
         })
         .collect(Collectors.toList());
   }
@@ -157,4 +160,73 @@ public class OrderService implements CreateOrderUseCase, ServeOrderUseCase {
     );
   }
 
+  @Override
+  public void cancelOrder(Long orderId) {
+    log.info("Attempting to cancel order {}", orderId);
+
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+    if (!order.isWaiting()) {
+      log.warn("Cannot cancel order {} because it is in status {}", orderId, order.getStatus());
+      throw new InvalidOrderStateException(orderId, order.getStatus(), OrderStatus.WAITING);
+    }
+
+    order.markAsCanceled();
+
+    String lockKey = QueueLockKey.of(order.getShopId());
+
+    lock.doWithLock(
+        lockKey,
+        Duration.ofSeconds(5),
+        Duration.ofSeconds(10),
+        () -> {
+          orderRepository.save(order);
+          log.debug("Order {} successfully marked as CANCELED", orderId);
+          return null;
+        }
+    );
+  }
+
+  @Override
+  public OrderStatusResponse getOrder(Long orderId) {
+    log.info("Fetching order status for ID {}", orderId);
+
+    // 1. Find order
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+    // 2. Validate the order is queue-based (i.e., has shop & queue number)
+    if (order.getStatus() == OrderStatus.WAITING && order.getQueueNumber() == null) {
+      throw new IllegalStateException("Order is in WAITING status but has no queue number assigned");
+    }
+
+    // 3. Calculate live position (dynamic)
+    int livePosition = 0;
+    if (order.getStatus() == OrderStatus.WAITING) {
+      livePosition = orderRepository.findPositionInQueueOrderById(order.getId());
+    }
+    // 6. Estimate wait time (simplified logic)
+
+    // 4. Map order items to DTO
+    List<OrderItemSummary> itemSummaries = order.getItems().stream()
+        .map(item -> new OrderItemSummary(
+            item.menuItemId(),
+            item.quantity(),
+            item.price(),
+            item.getTotalPrice()
+        ))
+        .toList();
+
+    // 5. Calculate total price
+    double totalPrice = itemSummaries.stream()
+        .mapToDouble(OrderItemSummary::getTotalPrice)
+        .sum();
+    List<OrderItemSummary> orderItemSummaries = orderItemMapper.map(order.getItems());
+
+    // 7. Return response
+    OrderStatusResponse orderStatusResponse = orderMapper.toOrderStatusResponse(order, livePosition, null, totalPrice);
+    orderStatusResponse.setItems(orderItemSummaries);
+    return orderStatusResponse;
+  }
 }

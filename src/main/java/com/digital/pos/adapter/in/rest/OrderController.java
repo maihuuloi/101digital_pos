@@ -1,13 +1,19 @@
 package com.digital.pos.adapter.in.rest;
 
+import com.digital.pos.adapter.in.rest.api.ApiUtil;
 import com.digital.pos.adapter.in.rest.api.OrdersApi;
 import com.digital.pos.adapter.in.rest.model.CreateOrderRequest;
 import com.digital.pos.adapter.in.rest.model.OrderCreatedResponse;
+import com.digital.pos.adapter.in.rest.model.OrderStatusResponse;
+import com.digital.pos.application.port.in.CancelOrderUseCase;
 import com.digital.pos.application.port.in.CreateOrderUseCase;
+import com.digital.pos.application.port.in.GetOrderUseCase;
 import com.digital.pos.application.port.in.ServeOrderUseCase;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +30,8 @@ public class OrderController implements OrdersApi {
 
   private final CreateOrderUseCase createOrderUseCase;
   private final ServeOrderUseCase serveOrderUseCase;
+  private final CancelOrderUseCase cancelOrderUseCase;
+  private final GetOrderUseCase getOrderUseCase;
 
   /**
    * POST /api/orders : Place a new order
@@ -50,6 +58,25 @@ public class OrderController implements OrdersApi {
 
     log.info("Order served successfully. orderId={}", orderId);
     return ResponseEntity.ok().build();
+  }
+
+  @Override
+  public ResponseEntity<Void> cancelOrder(Long orderId) {
+    log.info("Received request to cancel an order for orderId={}", orderId);
+    cancelOrderUseCase.cancelOrder(orderId);
+
+    log.info("Order cancelled successfully. orderId={}", orderId);
+    return ResponseEntity.ok().build();
+  }
+
+  //get order status
+  @Override
+  public ResponseEntity<OrderStatusResponse> getOrder(Long orderId) {
+    log.info("Received request to get order status for orderId={}", orderId);
+    OrderStatusResponse response = getOrderUseCase.getOrder(orderId);
+
+    log.info("Order status retrieved successfully. orderId={}, status={}", orderId, response.getStatus());
+    return ResponseEntity.ok(response);
   }
 
 }

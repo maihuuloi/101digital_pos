@@ -27,7 +27,7 @@ public class OrderEntityMapper {
 
   public Order toDomain(OrderEntity entity) {
     List<OrderItem> items = entity.getItems().stream()
-        .map(i -> new OrderItem(i.getMenuItemId(), i.getQuantity(), i.getPrice()))
+        .map(i -> new OrderItem(i.getId(), i.getMenuItemId(), i.getQuantity(), i.getPrice()))
         .toList();
 
     return Order.builder()
